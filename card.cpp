@@ -3093,7 +3093,8 @@ int32_t card::check_cost_condition(uint32_t ecode, uint8_t playerid, uint32_t su
 int32_t card::is_summonable_card() {
 	if(!(data.type & TYPE_MONSTER) || (data.type & (TYPE_RITUAL | TYPE_SPSUMMON
 					  | TYPE_FUSION | TYPE_SYNCHRO | TYPE_XYZ | TYPE_LINK
-					  | TYPE_TOKEN | TYPE_TRAPMONSTER)))
+					  | TYPE_TOKEN | TYPE_TRAPMONSTER
+					  | TYPE_ACCESS | TYPE_PAIRING)))
 		return FALSE;
 	return !is_affected_by_effect(EFFECT_UNSUMMONABLE_CARD);
 }
