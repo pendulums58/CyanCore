@@ -99,6 +99,9 @@ bool card::is_extra_deck_monster() const {
 		return false;
 	return true;
 }
+bool card::is_extra_deck_nonmonster() const {
+	return (data.type & TYPE_GIFT) != 0;
+}
 template<typename T>
 void insert_value(std::vector<uint8_t>& vec, const T& _val) {
 	T val = _val;
@@ -3637,7 +3640,7 @@ int32_t card::is_capable_send_to_deck(uint8_t playerid) {
 	return TRUE;
 }
 int32_t card::is_capable_send_to_extra(uint8_t playerid) {
-	if(!is_extra_deck_monster() && !(data.type & TYPE_PENDULUM))
+	if(!is_extra_deck_monster() && !is_extra_deck_nonmonster() && !(data.type & TYPE_PENDULUM))
 		return FALSE;
 	if(is_affected_by_effect(EFFECT_CANNOT_TO_DECK))
 		return FALSE;

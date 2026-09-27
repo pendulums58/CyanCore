@@ -123,7 +123,8 @@ void field::add_card(uint8_t playerid, card* pcard, uint8_t location, uint8_t se
 	if (!is_location_useable(playerid, location, sequence))
 		return;
 	// explicitly allow fusion spell cards to start in the extra
-	if(pcard->is_extra_deck_monster() || (pcard->data.type & TYPE_FUSION) != 0) {
+	if(pcard->is_extra_deck_monster() || (pcard->data.type & TYPE_FUSION) != 0
+	   || pcard->is_extra_deck_nonmonster()) {
 		if(location & (LOCATION_HAND | LOCATION_DECK)) {
 			location = LOCATION_EXTRA;
 			pcard->sendto_param.position = POS_FACEDOWN_DEFENSE;
@@ -269,7 +270,8 @@ bool field::move_card(uint8_t playerid, card* pcard, uint8_t location, uint8_t s
 		return false;
 	uint8_t preplayer = pcard->current.controler;
 	uint8_t presequence = pcard->current.sequence;
-	if(pcard->is_extra_deck_monster() && (location & (LOCATION_HAND | LOCATION_DECK))) {
+	if((pcard->is_extra_deck_monster() || pcard->is_extra_deck_nonmonster())
+	   && (location & (LOCATION_HAND | LOCATION_DECK))) {
 		location = LOCATION_EXTRA;
 		pcard->sendto_param.position = POS_FACEDOWN_DEFENSE;
 	}
