@@ -140,6 +140,11 @@ project "ocgcoreshared"
 		-- end
 	-- filter {}
 	targetname "ocgcore"
+	filter "configurations:Debug"
+		targetdir "bin/debug/shared"
+	filter "configurations:Release"
+		targetdir "bin/release/shared"
+	filter {}
 	defines "OCGCORE_EXPORT_FUNCTIONS"
 	staticruntime "on"
 	visibility "Hidden"
