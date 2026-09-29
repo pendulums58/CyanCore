@@ -2525,7 +2525,7 @@ bool field::process(Processors::BattleCommand& arg) {
 				seq = dest >> 16;
 				dest &= 0xffff;
 			}
-			core.attacker->sendto_param.set(core.attacker->owner, POS_FACEUP, dest, seq);
+			core.attacker->sendto_param.set(core.attacker->owner, POS_FACEUP, static_cast<uint16_t>(dest), seq);
 			core.attacker->set_status(STATUS_DESTROY_CONFIRMED, TRUE);
 		}
 		if(core.attack_target && core.attack_target->is_status(STATUS_BATTLE_RESULT)
@@ -2546,7 +2546,7 @@ bool field::process(Processors::BattleCommand& arg) {
 				seq = dest >> 16;
 				dest &= 0xffff;
 			}
-			core.attack_target->sendto_param.set(core.attack_target->owner, POS_FACEUP, dest, seq);
+			core.attack_target->sendto_param.set(core.attack_target->owner, POS_FACEUP, static_cast<uint16_t>(dest), seq);
 			core.attack_target->set_status(STATUS_DESTROY_CONFIRMED, TRUE);
 		}
 		core.attacker->set_status(STATUS_BATTLE_RESULT, FALSE);
@@ -3701,7 +3701,7 @@ bool field::process(Processors::AddChain& arg) {
 		message->write<uint32_t>(phandler->data.code);
 		message->write(phandler->get_info_location());
 		message->write<uint8_t>(clit.triggering_controler);
-		message->write<uint8_t>((uint8_t)clit.triggering_location);
+		message->write<uint8_t>(static_cast<uint8_t>(clit.triggering_location));
 		message->write<uint32_t>(clit.triggering_sequence);
 		message->write<uint64_t>(peffect->description);
 		message->write<uint32_t>(core.current_chain.size() + 1);

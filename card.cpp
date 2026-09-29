@@ -141,7 +141,7 @@ void card::get_infos(uint32_t query_flag) {
 		if(current.reason_card) {
 			loc_info info = current.reason_card->get_info_location();
 			insert_value<uint8_t>(pduel->query_buffer, info.controler);
-			insert_value<uint8_t>(pduel->query_buffer, info.location);
+			insert_value<uint8_t>(pduel->query_buffer, static_cast<uint8_t>(info.location));
 			insert_value<uint32_t>(pduel->query_buffer, info.sequence);
 			insert_value<uint32_t>(pduel->query_buffer, info.position);
 		} else {
@@ -155,7 +155,7 @@ void card::get_infos(uint32_t query_flag) {
 		if(equiping_target) {
 			loc_info info = equiping_target->get_info_location();
 			insert_value<uint8_t>(pduel->query_buffer, info.controler);
-			insert_value<uint8_t>(pduel->query_buffer, info.location);
+			insert_value<uint8_t>(pduel->query_buffer, static_cast<uint8_t>(info.location));
 			insert_value<uint32_t>(pduel->query_buffer, info.sequence);
 			insert_value<uint32_t>(pduel->query_buffer, info.position);
 		} else {
@@ -170,7 +170,7 @@ void card::get_infos(uint32_t query_flag) {
 		for(auto& pcard : effect_target_cards) {
 			loc_info info = pcard->get_info_location();
 			insert_value<uint8_t>(pduel->query_buffer, info.controler);
-			insert_value<uint8_t>(pduel->query_buffer, info.location);
+			insert_value<uint8_t>(pduel->query_buffer, static_cast<uint8_t>(info.location));
 			insert_value<uint32_t>(pduel->query_buffer, info.sequence);
 			insert_value<uint32_t>(pduel->query_buffer, info.position);
 		}
@@ -224,7 +224,7 @@ int32_t card::is_related_to_chains() {
 #undef CHECK_AND_INSERT
 loc_info card::get_info_location() {
 	if(overlay_target) {
-		return { overlay_target->current.controler, (uint8_t)((overlay_target->current.location | LOCATION_OVERLAY) & 0xff), overlay_target->current.sequence, current.sequence };
+		return { overlay_target->current.controler, static_cast<uint16_t>(overlay_target->current.location | LOCATION_OVERLAY), overlay_target->current.sequence, current.sequence };
 	} else {
 		return { current.controler, current.location , current.sequence, current.position };
 	}
@@ -1880,7 +1880,7 @@ void card::remove_effect(effect* peffect, effect_container::iterator it) {
 			auto message = pduel->new_message(MSG_REMOVE_COUNTER);
 			message->write<uint16_t>(cmit->first);
 			message->write<uint8_t>(current.controler);
-			message->write<uint8_t>(current.location);
+			message->write<uint8_t>(static_cast<uint8_t>(current.location));
 			message->write<uint8_t>(current.sequence);
 			message->write<uint16_t>(cmit->second[0] + cmit->second[1]);
 			counters.erase(cmit);
@@ -2033,7 +2033,7 @@ void card::reset(uint32_t id, uint32_t reset_type) {
 					auto message = pduel->new_message(MSG_REMOVE_COUNTER);
 					message->write<uint16_t>(rm->first);
 					message->write<uint8_t>(current.controler);
-					message->write<uint8_t>(current.location);
+					message->write<uint8_t>(static_cast<uint8_t>(current.location));
 					message->write<uint8_t>(current.sequence);
 					message->write<uint16_t>(rm->second[1]);
 					rm->second[1] = 0;
@@ -2250,7 +2250,7 @@ int32_t card::add_counter(uint8_t playerid, uint16_t countertype, uint16_t count
 	auto message = pduel->new_message(MSG_ADD_COUNTER);
 	message->write<uint16_t>(cttype);
 	message->write<uint8_t>(current.controler);
-	message->write<uint8_t>(current.location);
+	message->write<uint8_t>(static_cast<uint8_t>(current.location));
 	message->write<uint8_t>(current.sequence);
 	message->write<uint16_t>(pcount);
 	pduel->game_field->raise_single_event(this, nullptr, EVENT_ADD_COUNTER + countertype, pduel->game_field->core.reason_effect, REASON_EFFECT, playerid, playerid, pcount);
@@ -2274,7 +2274,7 @@ int32_t card::remove_counter(uint16_t countertype, uint16_t count) {
 	auto message = pduel->new_message(MSG_REMOVE_COUNTER);
 	message->write<uint16_t>(countertype);
 	message->write<uint8_t>(current.controler);
-	message->write<uint8_t>(current.location);
+	message->write<uint8_t>(static_cast<uint8_t>(current.location));
 	message->write<uint8_t>(current.sequence);
 	message->write<uint16_t>(count);
 	return TRUE;
@@ -3547,7 +3547,7 @@ int32_t card::is_removeable_as_cost(uint8_t playerid, uint8_t pos) {
 		return FALSE;
 	bool redirchk = false;
 	auto op_param = sendto_param;
-	sendto_param.location = dest;
+	sendto_param.location = static_cast<uint16_t>(dest);
 	if (current.location & LOCATION_ONFIELD)
 		redirect = leave_field_redirect(REASON_COST) & 0xffff;
 	if(redirect) {
@@ -3664,7 +3664,7 @@ int32_t card::is_capable_cost_to_grave(uint8_t playerid) {
 	if(!is_capable_send_to_grave(playerid, REASON_COST))
 		return FALSE;
 	auto op_param = sendto_param;
-	sendto_param.location = dest;
+	sendto_param.location = static_cast<uint16_t>(dest);
 	if(current.location & LOCATION_ONFIELD)
 		redirect = leave_field_redirect(REASON_COST) & 0xffff;
 	if(redirect) dest = redirect;
@@ -3687,7 +3687,7 @@ int32_t card::is_capable_cost_to_hand(uint8_t playerid) {
 	if(!is_capable_send_to_hand(playerid))
 		return FALSE;
 	auto op_param = sendto_param;
-	sendto_param.location = dest;
+	sendto_param.location = static_cast<uint16_t>(dest);
 	if(current.location & LOCATION_ONFIELD)
 		redirect = leave_field_redirect(REASON_COST) & 0xffff;
 	if(redirect) dest = redirect;
@@ -3710,7 +3710,7 @@ int32_t card::is_capable_cost_to_deck(uint8_t playerid) {
 	if(!is_capable_send_to_deck(playerid))
 		return FALSE;
 	auto op_param = sendto_param;
-	sendto_param.location = dest;
+	sendto_param.location = static_cast<uint16_t>(dest);
 	if(current.location & LOCATION_ONFIELD)
 		redirect = leave_field_redirect(REASON_COST) & 0xffff;
 	if(redirect) dest = redirect;
@@ -3733,7 +3733,7 @@ int32_t card::is_capable_cost_to_extra(uint8_t playerid) {
 	if(!is_capable_send_to_deck(playerid))
 		return FALSE;
 	auto op_param = sendto_param;
-	sendto_param.location = dest;
+	sendto_param.location = static_cast<uint16_t>(dest);
 	if(current.location & LOCATION_ONFIELD)
 		redirect = leave_field_redirect(REASON_COST) & 0xffff;
 	if(redirect) dest = redirect;

@@ -25,7 +25,7 @@ struct chain;
 
 struct loc_info {
 	uint8_t controler;
-	uint8_t location;
+	uint16_t location;
 	uint32_t sequence;
 	uint32_t position;
 };
@@ -48,7 +48,7 @@ struct card_state {
 	int32_t base_attack{};
 	int32_t base_defense{};
 	uint8_t controler{};
-	uint8_t location{};
+	uint16_t location{};
 	uint32_t sequence{};
 	uint32_t position{};
 	uint32_t reason{};
@@ -58,7 +58,7 @@ struct card_state {
 	effect* reason_effect{};
 	template<typename T>
 	static bool is_location(const T& loc_info, uint16_t loc) {
-		if(loc_info.location & static_cast<uint8_t>(loc))
+		if(loc_info.location & static_cast<uint16_t>(loc))
 			return true;
 		if((loc & LOCATION_EMZONE) && loc_info.location == LOCATION_MZONE && loc_info.sequence >= 5)
 			return true;
@@ -96,7 +96,7 @@ public:
 		uint32_t findcard(card* pcard);
 	};
 	struct sendto_param_t {
-		void set(uint8_t p, uint8_t pos, uint8_t loc, uint8_t seq = 0) {
+		void set(uint8_t p, uint8_t pos, uint16_t loc, uint8_t seq = 0) {
 			playerid = p;
 			position = pos;
 			location = loc;
@@ -110,7 +110,7 @@ public:
 		}
 		uint8_t playerid{};
 		uint8_t position{};
-		uint8_t location{};
+		uint16_t location{};
 		uint8_t sequence{};
 	};
 	card_data data{};
@@ -121,7 +121,7 @@ public:
 	struct summon_info {
 		uint32_t type{};
 		uint8_t player{};
-		uint8_t location{};
+		uint16_t location{};
 		uint8_t sequence{};
 		bool pzone{};
 	};

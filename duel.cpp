@@ -166,7 +166,7 @@ void duel::duel_message::write(const void* buff, size_t size) {
 }
 void duel::duel_message::write(loc_info loc) {
 	write<uint8_t>(loc.controler);
-	write<uint8_t>(loc.location);
+	write<uint8_t>(static_cast<uint8_t>(loc.location));
 	write<uint32_t>(loc.sequence);
 	write<uint32_t>(loc.position);
 }

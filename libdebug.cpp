@@ -113,7 +113,7 @@ LUA_STATIC_FUNCTION(PreSummon) {
 	check_param_count(L, 2);
 	auto pcard = lua_get<card*, true>(L, 1);
 	auto summon_type = lua_get<uint32_t>(L, 2);
-	auto summon_location = lua_get<uint8_t, 0>(L, 3);
+	auto summon_location = lua_get<uint16_t, 0>(L, 3);
 	auto summon_sequence = lua_get<uint8_t, 0>(L, 4);
 	auto summon_pzone = lua_get<bool, false>(L, 5);
 	pcard->summon.location = summon_location;

@@ -1777,7 +1777,7 @@ LUA_FUNCTION(RemoveAllCounters) {
 		auto message = pduel->new_message(MSG_REMOVE_COUNTER);
 		message->write<uint16_t>(cmit.first);
 		message->write<uint8_t>(self->current.controler);
-		message->write<uint8_t>(self->current.location);
+		message->write<uint8_t>(static_cast<uint8_t>(self->current.location));
 		message->write<uint8_t>(self->current.sequence);
 		message->write<uint16_t>(cmit.second[0] + cmit.second[1]);
 		total += cmit.second[0] + cmit.second[1];
@@ -2087,7 +2087,7 @@ LUA_FUNCTION(SetUniqueOnField) {
 		self->unique_function = interpreter::get_function_handle(L, 4);
 	} else
 		self->unique_code = lua_get<uint32_t>(L, 4);
-	auto location = lua_get<uint8_t, LOCATION_ONFIELD>(L, 5) & LOCATION_ONFIELD;
+	auto location = lua_get<uint16_t, LOCATION_ONFIELD>(L, 5) & LOCATION_ONFIELD;
 	self->unique_location = location;
 	effect* peffect = pduel->new_effect();
 	peffect->owner = self;
@@ -2103,7 +2103,7 @@ LUA_FUNCTION(SetUniqueOnField) {
 LUA_FUNCTION(CheckUniqueOnField) {
 	check_param_count(L, 2);
 	auto check_player = lua_get<uint8_t>(L, 2);
-	auto check_location = lua_get<uint8_t, LOCATION_ONFIELD>(L, 3) & LOCATION_ONFIELD;
+	auto check_location = static_cast<uint16_t>(lua_get<uint16_t, LOCATION_ONFIELD>(L, 3) & LOCATION_ONFIELD);
 	auto icard = lua_get<card*>(L, 4);
 	lua_pushboolean(L, pduel->game_field->check_unique_onfield(self, check_player, check_location, icard) ? 0 : 1);
 	return 1;

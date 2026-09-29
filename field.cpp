@@ -110,14 +110,14 @@ void field::reload_field_info() {
 		message->write<uint32_t>(peffect->get_handler()->data.code);
 		message->write(peffect->get_handler()->get_info_location());
 		message->write<uint8_t>(ch.triggering_controler);
-		message->write<uint8_t>((uint8_t)ch.triggering_location);
+		message->write<uint8_t>(static_cast<uint8_t>(ch.triggering_location));
 		message->write<uint32_t>(ch.triggering_sequence);
 		message->write<uint64_t>(peffect->description);
 	}
 }
 // The core of moving cards, and Debug.AddCard() will call this function directly.
 // check Fusion/S/X monster redirection by the rule, set fieldid_r
-void field::add_card(uint8_t playerid, card* pcard, uint8_t location, uint8_t sequence, bool pzone) {
+void field::add_card(uint8_t playerid, card* pcard, uint16_t location, uint8_t sequence, bool pzone) {
 	if (pcard->current.location != 0)
 		return;
 	if (!is_location_useable(playerid, location, sequence))
@@ -265,7 +265,7 @@ void field::remove_card(card* pcard) {
 // 4. control_adjust()
 // 5. move_card()
 // check Fusion/S/X monster redirection by the rule
-bool field::move_card(uint8_t playerid, card* pcard, uint8_t location, uint8_t sequence, bool pzone) {
+bool field::move_card(uint8_t playerid, card* pcard, uint16_t location, uint8_t sequence, bool pzone) {
 	if (!is_location_useable(playerid, location, sequence))
 		return false;
 	uint8_t preplayer = pcard->current.controler;
@@ -402,7 +402,7 @@ bool field::move_card(uint8_t playerid, card* pcard, uint8_t location, uint8_t s
 }
 void field::swap_card(card* pcard1, card* pcard2, uint8_t new_sequence1, uint8_t new_sequence2) {
 	uint8_t p1 = pcard1->current.controler, p2 = pcard2->current.controler;
-	uint8_t l1 = pcard1->current.location, l2 = pcard2->current.location;
+	uint16_t l1 = pcard1->current.location, l2 = pcard2->current.location;
 	uint8_t s1 = pcard1->current.sequence, s2 = pcard2->current.sequence;
 	loc_info info1 = pcard1->get_info_location(), info2 = pcard2->get_info_location();
 	if(!(l1 & LOCATION_ONFIELD) || !(l2 & LOCATION_ONFIELD))
@@ -659,7 +659,7 @@ int32_t field::is_location_useable(uint32_t playerid, uint32_t location, uint32_
 // uplayer: request player, PLAYER_NONE means ignoring EFFECT_MAX_MZONE, EFFECT_MAX_SZONE
 // list: store local flag in list
 // return: usable count of LOCATION_MZONE or real LOCATION_SZONE of playerid requested by uplayer (may be negative)
-int32_t field::get_useable_count(card* pcard, uint8_t playerid, uint8_t location, uint8_t uplayer, uint32_t reason, uint32_t zone, uint32_t* list) {
+int32_t field::get_useable_count(card* pcard, uint8_t playerid, uint16_t location, uint8_t uplayer, uint32_t reason, uint32_t zone, uint32_t* list) {
 	if(location == LOCATION_MZONE && pcard && pcard->current.location == LOCATION_EXTRA)
 		return get_useable_count_fromex(pcard, playerid, uplayer, zone, list);
 	else
@@ -703,7 +703,7 @@ int32_t field::get_spsummonable_count_fromex(card* pcard, uint8_t playerid, uint
 		pcard->current.location = 0;
 	return spsummonable_count;
 }
-int32_t field::get_useable_count_other(card* pcard, uint8_t playerid, uint8_t location, uint8_t uplayer, uint32_t reason, uint32_t zone, uint32_t* list) {
+int32_t field::get_useable_count_other(card* pcard, uint8_t playerid, uint16_t location, uint8_t uplayer, uint32_t reason, uint32_t zone, uint32_t* list) {
 	int32_t count = get_tofield_count(pcard, playerid, location, uplayer, reason, zone, list);
 	int32_t limit;
 	if(location == LOCATION_MZONE)
@@ -714,7 +714,7 @@ int32_t field::get_useable_count_other(card* pcard, uint8_t playerid, uint8_t lo
 		count = limit;
 	return count;
 }
-int32_t field::get_tofield_count(card* pcard, uint8_t playerid, uint8_t location, uint32_t uplayer, uint32_t reason, uint32_t zone, uint32_t* list) {
+int32_t field::get_tofield_count(card* pcard, uint8_t playerid, uint16_t location, uint32_t uplayer, uint32_t reason, uint32_t zone, uint32_t* list) {
 	if (location != LOCATION_MZONE && location != LOCATION_SZONE)
 		return 0;
 	uint32_t flag = player[playerid].disabled_location | player[playerid].used_location;
@@ -807,7 +807,7 @@ int32_t field::get_szone_limit(uint8_t playerid, uint8_t uplayer, uint32_t reaso
 	int32_t limit = max - field_used_count[used_flag];
 	return limit;
 }
-int32_t field::get_forced_zones(card* pcard, uint8_t playerid, uint8_t location, uint32_t uplayer, uint32_t reason) {
+int32_t field::get_forced_zones(card* pcard, uint8_t playerid, uint16_t location, uint32_t uplayer, uint32_t reason) {
 	if(location != LOCATION_MZONE)
 		return 0xff;
 	effect_set eset;
@@ -888,7 +888,7 @@ uint32_t field::get_linked_zone(int32_t playerid, bool free, bool actually_linke
 	}
 	return zones;
 }
-void field::get_linked_cards(uint8_t self, uint8_t location1, uint8_t location2, card_set* cset) {
+void field::get_linked_cards(uint8_t self, uint16_t location1, uint16_t location2, card_set* cset) {
 	get_cards_in_zone(cset, get_linked_zone(self), self, location1);
 	get_cards_in_zone(cset, get_linked_zone(1 - self), 1 - self, location2);
 }
@@ -898,7 +898,7 @@ int32_t field::check_extra_link(int32_t playerid, card* pcard, int32_t sequence)
 	if(player[playerid].list_mzone[sequence])
 		return FALSE;
 	uint8_t cur_controler = pcard->current.controler;
-	uint8_t cur_location = pcard->current.location;
+	uint16_t cur_location = pcard->current.location;
 	uint8_t cur_sequence = pcard->current.sequence;
 	uint8_t cur_position = pcard->current.position;
 	player[playerid].list_mzone[sequence] = pcard;
@@ -938,7 +938,7 @@ void field::get_cards_in_zone(card_set* cset, uint32_t zone, int32_t playerid, i
 		}
 	}
 }
-void field::shuffle(uint8_t playerid, uint8_t location) {
+void field::shuffle(uint8_t playerid, uint16_t location) {
 	if(!(location & (LOCATION_HAND | LOCATION_DECK | LOCATION_EXTRA)))
 		return;
 	card_vector& to_shuffle = (location == LOCATION_HAND) ? player[playerid].list_hand : (location == LOCATION_DECK) ? player[playerid].list_main : player[playerid].list_extra;
@@ -1004,7 +1004,7 @@ void field::shuffle(uint8_t playerid, uint8_t location) {
 		}
 	}
 }
-void field::reset_sequence(uint8_t playerid, uint8_t location) {
+void field::reset_sequence(uint8_t playerid, uint16_t location) {
 	if(location & (LOCATION_ONFIELD))
 		return;
 	uint32_t i = 0;
@@ -2249,7 +2249,7 @@ void field::remove_unique_card(card* pcard) {
 		core.unique_cards[1 - con].erase(pcard);
 }
 // return: pcard->unique_effect or 0
-effect* field::check_unique_onfield(card* pcard, uint8_t controler, uint8_t location, card* icard) {
+effect* field::check_unique_onfield(card* pcard, uint8_t controler, uint16_t location, card* icard) {
 	for(auto& ucard : core.unique_cards[controler]) {
 		if((ucard != pcard) && (ucard != icard) && ucard->is_position(POS_FACEUP) && ucard->get_status(STATUS_EFFECT_ENABLED)
 			&& !ucard->get_status(STATUS_DISABLED | STATUS_FORBIDDEN)

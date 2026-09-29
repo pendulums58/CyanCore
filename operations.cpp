@@ -493,7 +493,7 @@ bool field::process(Processors::Draw& arg) {
 				for(auto& pcard : drawn_set) {
 					message->write<uint32_t>(pcard->data.code);
 					message->write<uint8_t>(pcard->current.controler);
-					message->write<uint8_t>(pcard->current.location);
+					message->write<uint8_t>(static_cast<uint8_t>(pcard->current.location));
 					message->write<uint32_t>(pcard->current.sequence);
 				}
 				shuffle(playerid, LOCATION_HAND);
@@ -2939,7 +2939,7 @@ bool field::process(Processors::SpellSetGroup& arg) {
 			for(auto& pcard : core.set_group_set) {
 				message->write<uint32_t>(pcard->data.code);
 				message->write<uint8_t>(pcard->current.controler);
-				message->write<uint8_t>(pcard->current.location);
+				message->write<uint8_t>(static_cast<uint8_t>(pcard->current.location));
 				message->write<uint32_t>(pcard->current.sequence);
 			}
 		}
@@ -3977,7 +3977,7 @@ bool field::process(Processors::Destroy& arg) {
 			        || (dest == LOCATION_DECK && !pcard->is_capable_send_to_deck(reason_player))
 			        || (dest == LOCATION_REMOVED && !pcard->is_removeable(reason_player, pcard->sendto_param.position, reason)))
 				dest = LOCATION_GRAVE;
-			pcard->sendto_param.location = dest;
+			pcard->sendto_param.location = static_cast<uint16_t>(dest);
 		}
 		operation_replace(EFFECT_SEND_REPLACE, 5, sendtargets);
 		emplace_process<Processors::SendTo>(Step{ 1 }, sendtargets, reason_effect, reason | REASON_DESTROY, reason_player);
@@ -4225,7 +4225,7 @@ bool field::process(Processors::SendToReplace& arg) {
 	auto targets = arg.targets;
 	auto target = arg.target;
 	uint8_t playerid = target->sendto_param.playerid;
-	uint8_t dest = target->sendto_param.location;
+	uint16_t dest = target->sendto_param.location;
 	if(!targets->has_card(target))
 		return TRUE;
 	if(target->current.location == dest && target->current.controler == playerid) {
@@ -4254,7 +4254,7 @@ bool field::process(Processors::SendTo& arg) {
 		for(auto cit = targets->container.begin(); cit != targets->container.end();) {
 			auto rm = cit++;
 			card* pcard = *rm;
-			uint8_t dest = pcard->sendto_param.location;
+			uint16_t dest = pcard->sendto_param.location;
 			if(!(reason & REASON_RULE) &&
 				(pcard->get_status(STATUS_SUMMONING | STATUS_SPSUMMON_STEP)
 					|| (!(pcard->current.reason & (REASON_COST | REASON_SUMMON | REASON_MATERIAL)) && !pcard->is_affect_by_effect(pcard->current.reason_effect))
@@ -4361,7 +4361,7 @@ bool field::process(Processors::SendTo& arg) {
 			if(redirect) {
 				pcard->current.reason &= ~REASON_TEMPORARY;
 				pcard->current.reason |= REASON_REDIRECT;
-				pcard->sendto_param.location = redirect;
+				pcard->sendto_param.location = static_cast<uint16_t>(redirect);
 				pcard->sendto_param.sequence = redirect_seq;
 				dest = redirect;
 				if(dest == LOCATION_REMOVED) {
@@ -4378,7 +4378,7 @@ bool field::process(Processors::SendTo& arg) {
 			}
 			if(redirect && (pcard->current.location != redirect)) {
 				pcard->current.reason |= REASON_REDIRECT;
-				pcard->sendto_param.location = redirect;
+				pcard->sendto_param.location = static_cast<uint16_t>(redirect);
 				pcard->sendto_param.sequence = redirect_seq;
 			}
 			if(check_cb)
@@ -4477,9 +4477,9 @@ bool field::process(Processors::SendTo& arg) {
 			return FALSE;
 		auto& param = arg.extra_args;
 		card* pcard = *param->cvit;
-		uint8_t oloc = pcard->current.location;
+		uint16_t oloc = pcard->current.location;
 		uint8_t playerid = pcard->sendto_param.playerid & 0x7;
-		uint8_t dest = pcard->sendto_param.location;
+		uint16_t dest = pcard->sendto_param.location;
 		uint8_t seq = pcard->sendto_param.sequence;
 		uint8_t control_player = pcard->overlay_target ? pcard->overlay_target->current.controler : pcard->current.controler;
 		if(dest == LOCATION_GRAVE) {
@@ -4542,7 +4542,7 @@ bool field::process(Processors::SendTo& arg) {
 	case 8: {
 		auto& param = arg.extra_args;
 		card* pcard = *param->cvit;
-		uint8_t oloc = pcard->current.location;
+		uint16_t oloc = pcard->current.location;
 		uint8_t seq = returns.at<int8_t>(2);
 		auto message = pduel->new_message(MSG_MOVE);
 		message->write<uint32_t>(pcard->data.code);
@@ -4603,7 +4603,7 @@ bool field::process(Processors::SendTo& arg) {
 		for(auto& pcard : targets->container) {
 			if(!(pcard->data.type & TYPE_TOKEN))
 				pcard->enable_field_effect(true);
-			uint8_t nloc = pcard->current.location;
+			uint16_t nloc = pcard->current.location;
 			if(nloc == LOCATION_HAND)
 				pcard->reset(RESET_TOHAND, RESET_EVENT);
 			if(nloc == LOCATION_DECK || nloc == LOCATION_EXTRA)
@@ -4643,7 +4643,7 @@ bool field::process(Processors::SendTo& arg) {
 		card_set tohand, todeck, tograve, remove, discard, released, destroyed;
 		card_set equipings, overlays;
 		for(auto& pcard : targets->container) {
-			uint8_t nloc = pcard->current.location;
+			uint16_t nloc = pcard->current.location;
 			if(pcard->equiping_target)
 				pcard->unequip();
 			if(pcard->equiping_cards.size()) {
@@ -4766,7 +4766,7 @@ bool field::process(Processors::DiscardDeck& arg) {
 			(*cit)->current.reason = reason;
 			uint32_t redirect = (*cit)->destination_redirect(dest, reason) & 0xffff;
 			if(redirect) {
-				(*cit)->sendto_param.location = redirect;
+				(*cit)->sendto_param.location = static_cast<uint16_t>(redirect);
 			}
 		}
 		if(core.global_flag & GLOBALFLAG_DECK_REVERSE_CHECK) {
@@ -4790,7 +4790,7 @@ bool field::process(Processors::DiscardDeck& arg) {
 			if(player[playerid].list_main.size() == 0)
 				break;
 			card* pcard = player[playerid].list_main.back();
-			uint8_t dest = pcard->sendto_param.location;
+			uint16_t dest = pcard->sendto_param.location;
 			if(dest == LOCATION_GRAVE)
 				pcard->reset(RESET_TOGRAVE, RESET_EVENT);
 			else if(dest == LOCATION_HAND) {
@@ -4901,7 +4901,7 @@ bool field::process(Processors::MoveToField& arg) {
 	auto confirm = arg.confirm;
 	uint8_t move_player = (target->to_field_param >> 24) & 0xff;
 	uint8_t playerid = (target->to_field_param >> 16) & 0xff;
-	uint8_t location = (target->to_field_param >> 8) & 0xff;
+	uint16_t location = (target->to_field_param >> 8) & 0xff;
 	uint8_t positions = (target->to_field_param) & 0xff;
 	switch(arg.step) {
 	case 0: {
@@ -5278,7 +5278,7 @@ bool field::process(Processors::ChangePos& arg) {
 			auto message = pduel->new_message(MSG_POS_CHANGE);
 			message->write<uint32_t>(pcard->data.code);
 			message->write<uint8_t>(pcard->current.controler);
-			message->write<uint8_t>(pcard->current.location);
+			message->write<uint8_t>(static_cast<uint8_t>(pcard->current.location));
 			message->write<uint8_t>(pcard->current.sequence);
 			message->write<uint8_t>(pcard->previous.position);
 			message->write<uint8_t>(pcard->current.position);

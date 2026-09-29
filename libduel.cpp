@@ -764,7 +764,7 @@ LUA_STATIC_FUNCTION(SwapSequence) {
 	auto pcard1 = lua_get<card*, true>(L, 1);
 	auto pcard2 = lua_get<card*, true>(L, 2);
 	uint8_t player = pcard1->current.controler;
-	uint8_t location = pcard1->current.location;
+	uint16_t location = pcard1->current.location;
 	if(pcard2->current.controler == player
 		&& (location == LOCATION_MZONE || location == LOCATION_SZONE) && pcard2->current.location == location
 		&& pcard1->is_affect_by_effect(pduel->game_field->core.reason_effect)
@@ -836,7 +836,7 @@ LUA_STATIC_FUNCTION(ConfirmDecktop) {
 		const auto& pcard = *cit;
 		message->write<uint32_t>(pcard->data.code);
 		message->write<uint8_t>(pcard->current.controler);
-		message->write<uint8_t>(pcard->current.location);
+		message->write<uint8_t>(static_cast<uint8_t>(pcard->current.location));
 		message->write<uint32_t>(pcard->current.sequence);
 	}
 	return yieldk({
@@ -866,7 +866,7 @@ LUA_STATIC_FUNCTION(ConfirmExtratop) {
 		const auto& pcard = *cit;
 		message->write<uint32_t>(pcard->data.code);
 		message->write<uint8_t>(pcard->current.controler);
-		message->write<uint8_t>(pcard->current.location);
+		message->write<uint8_t>(static_cast<uint8_t>(pcard->current.location));
 		message->write<uint32_t>(pcard->current.sequence);
 	}
 	return yieldk({
@@ -912,7 +912,7 @@ LUA_STATIC_FUNCTION(ConfirmCards) {
 		message->write<uint32_t>(1);
 		message->write<uint32_t>(pcard->data.code);
 		message->write<uint8_t>(pcard->current.controler);
-		message->write<uint8_t>(pcard->current.location);
+		message->write<uint8_t>(static_cast<uint8_t>(pcard->current.location));
 		message->write<uint32_t>(pcard->current.sequence);
 		raise_confirm_event(pcard);
 		field.raise_event(pcard, EVENT_CONFIRM, trigeff, reason, field.core.reason_player, revealingplayer, 0);
@@ -921,7 +921,7 @@ LUA_STATIC_FUNCTION(ConfirmCards) {
 		for(auto& _pcard : pgroup->container) {
 			message->write<uint32_t>(_pcard->data.code);
 			message->write<uint8_t>(_pcard->current.controler);
-			message->write<uint8_t>(_pcard->current.location);
+			message->write<uint8_t>(static_cast<uint8_t>(_pcard->current.location));
 			message->write<uint32_t>(_pcard->current.sequence);
 			raise_confirm_event(_pcard);
 		}
@@ -1387,7 +1387,7 @@ LUA_STATIC_FUNCTION(ShuffleSetCard) {
 	auto it = pgroup->container.begin();
 	uint8_t ct = 0;
 	ms[ct] = *it;
-	uint8_t loc = ms[ct]->current.location;
+	uint16_t loc = ms[ct]->current.location;
 	if(loc != LOCATION_MZONE && loc != LOCATION_SZONE)
 		return 0;
 	uint8_t tp = ms[ct]->current.controler;
@@ -1421,7 +1421,7 @@ LUA_STATIC_FUNCTION(ShuffleSetCard) {
 	auto& field = pduel->game_field;
 	auto& list = (loc == LOCATION_MZONE) ? field->player[tp].list_mzone : field->player[tp].list_szone;
 	auto message = pduel->new_message(MSG_SHUFFLE_SET_CARD);
-	message->write<uint8_t>(loc);
+	message->write<uint8_t>(static_cast<uint8_t>(loc));
 	message->write<uint8_t>(ct);
 	for(auto* pcard : pgroup->container) {
 		message->write(pcard->get_info_location());
@@ -1685,7 +1685,7 @@ LUA_STATIC_FUNCTION(CheckSummonedCount) {
 LUA_STATIC_FUNCTION(GetLocationCount) {
 	check_param_count(L, 2);
 	auto playerid = lua_get<uint8_t>(L, 1);
-	auto location = lua_get<uint8_t>(L, 2);
+	auto location = lua_get<uint16_t>(L, 2);
 	if(playerid != 0 && playerid != 1)
 		return 0;
 	auto uplayer = lua_get<uint8_t>(L, 3, pduel->game_field->core.reason_player);

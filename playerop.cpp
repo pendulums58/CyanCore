@@ -28,7 +28,7 @@ bool field::process(Processors::SelectBattleCmd& arg) {
 			card* pcard = peffect->get_handler();
 			message->write<uint32_t>(pcard->data.code);
 			message->write<uint8_t>(pcard->current.controler);
-			message->write<uint8_t>(pcard->current.location);
+			message->write<uint8_t>(static_cast<uint8_t>(pcard->current.location));
 			message->write<uint32_t>(pcard->current.sequence);
 			message->write<uint64_t>(peffect->description);
 			message->write<uint8_t>(peffect->get_client_mode());
@@ -38,7 +38,7 @@ bool field::process(Processors::SelectBattleCmd& arg) {
 		for(auto& pcard : core.attackable_cards) {
 			message->write<uint32_t>(pcard->data.code);
 			message->write<uint8_t>(pcard->current.controler);
-			message->write<uint8_t>(pcard->current.location);
+			message->write<uint8_t>(static_cast<uint8_t>(pcard->current.location));
 			message->write<uint8_t>(pcard->current.sequence);
 			message->write<uint8_t>(pcard->direct_attackable);
 		}
@@ -76,7 +76,7 @@ bool field::process(Processors::SelectIdleCmd& arg) {
 		for(auto& pcard : core.summonable_cards) {
 			message->write<uint32_t>(pcard->data.code);
 			message->write<uint8_t>(pcard->current.controler);
-			message->write<uint8_t>(pcard->current.location);
+			message->write<uint8_t>(static_cast<uint8_t>(pcard->current.location));
 			message->write<uint32_t>(pcard->current.sequence);
 		}
 		//idle spsummon
@@ -84,7 +84,7 @@ bool field::process(Processors::SelectIdleCmd& arg) {
 		for(auto& pcard : core.spsummonable_cards) {
 			message->write<uint32_t>(pcard->data.code);
 			message->write<uint8_t>(pcard->current.controler);
-			message->write<uint8_t>(pcard->current.location);
+			message->write<uint8_t>(static_cast<uint8_t>(pcard->current.location));
 			message->write<uint32_t>(pcard->current.sequence);
 		}
 		//idle pos change
@@ -92,7 +92,7 @@ bool field::process(Processors::SelectIdleCmd& arg) {
 		for(auto& pcard : core.repositionable_cards) {
 			message->write<uint32_t>(pcard->data.code);
 			message->write<uint8_t>(pcard->current.controler);
-			message->write<uint8_t>(pcard->current.location);
+			message->write<uint8_t>(static_cast<uint8_t>(pcard->current.location));
 			message->write<uint8_t>(pcard->current.sequence);
 		}
 		//idle mset
@@ -100,7 +100,7 @@ bool field::process(Processors::SelectIdleCmd& arg) {
 		for(auto& pcard : core.msetable_cards) {
 			message->write<uint32_t>(pcard->data.code);
 			message->write<uint8_t>(pcard->current.controler);
-			message->write<uint8_t>(pcard->current.location);
+			message->write<uint8_t>(static_cast<uint8_t>(pcard->current.location));
 			message->write<uint32_t>(pcard->current.sequence);
 		}
 		//idle sset
@@ -108,7 +108,7 @@ bool field::process(Processors::SelectIdleCmd& arg) {
 		for(auto& pcard : core.ssetable_cards) {
 			message->write<uint32_t>(pcard->data.code);
 			message->write<uint8_t>(pcard->current.controler);
-			message->write<uint8_t>(pcard->current.location);
+			message->write<uint8_t>(static_cast<uint8_t>(pcard->current.location));
 			message->write<uint32_t>(pcard->current.sequence);
 		}
 		//idle activate
@@ -119,7 +119,7 @@ bool field::process(Processors::SelectIdleCmd& arg) {
 			card* pcard = peffect->get_handler();
 			message->write<uint32_t>(pcard->data.code);
 			message->write<uint8_t>(pcard->current.controler);
-			message->write<uint8_t>(pcard->current.location);
+			message->write<uint8_t>(static_cast<uint8_t>(pcard->current.location));
 			message->write<uint32_t>(pcard->current.sequence);
 			message->write<uint64_t>(peffect->description);
 			message->write<uint8_t>(peffect->get_client_mode());
@@ -576,7 +576,7 @@ bool field::process(Processors::SelectPlace& arg) {
 			if(select_player > 1)
 				return retry();
 			const bool isplayerid = (select_player == playerid);
-			uint8_t location = returns.at<uint8_t>(pt + 1);
+			uint16_t location = returns.at<uint8_t>(pt + 1);
 			if(location != LOCATION_MZONE && location != LOCATION_SZONE)
 				return retry();
 			const bool ismzone = location == LOCATION_MZONE;
@@ -672,7 +672,7 @@ bool field::process(Processors::SelectTributeP& arg) {
 		for(auto& pcard : core.select_cards) {
 			message->write<uint32_t>(pcard->data.code);
 			message->write<uint8_t>(pcard->current.controler);
-			message->write<uint8_t>(pcard->current.location);
+			message->write<uint8_t>(static_cast<uint8_t>(pcard->current.location));
 			message->write<uint32_t>(pcard->current.sequence);
 			message->write<uint8_t>(pcard->release_param);
 		}
@@ -747,7 +747,7 @@ bool field::process(Processors::SelectCounter& arg) {
 		for(auto& pcard : core.select_cards) {
 			message->write<uint32_t>(pcard->data.code);
 			message->write<uint8_t>(pcard->current.controler);
-			message->write<uint8_t>(pcard->current.location);
+			message->write<uint8_t>(static_cast<uint8_t>(pcard->current.location));
 			message->write<uint8_t>(pcard->current.sequence);
 			message->write<uint16_t>(pcard->get_counter(countertype));
 		}

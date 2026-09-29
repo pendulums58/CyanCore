@@ -70,7 +70,7 @@ void OCG_DuelNewCard(OCG_Duel ocg_duel, const OCG_NewCardInfo* info_ptr) {
 		if(game_field.is_location_useable(info.con, info.loc, info.seq)) {
 			card* pcard = pduel->new_card(info.code);
 			pcard->owner = info.team;
-			game_field.add_card(info.con, pcard, (uint8_t)info.loc, (uint8_t)info.seq);
+			game_field.add_card(info.con, pcard, static_cast<uint16_t>(info.loc), (uint8_t)info.seq);
 			pcard->current.position = info.pos;
 			if(!(info.loc & LOCATION_ONFIELD) || (info.pos & POS_FACEUP)) {
 				pcard->enable_field_effect(true);
@@ -93,7 +93,7 @@ void OCG_DuelNewCard(OCG_Duel ocg_duel, const OCG_NewCardInfo* info_ptr) {
 			player.extra_extra_p_count.resize(duelist);
 		}
 		--duelist;
-		pcard->current.location = static_cast<uint8_t>(info.loc);
+		pcard->current.location = static_cast<uint16_t>(info.loc);
 		pcard->owner = info.team;
 		pcard->current.controler = info.team;
 		pcard->current.position = POS_FACEDOWN_DEFENSE;
@@ -287,7 +287,7 @@ void* OCG_DuelQueryField(OCG_Duel ocg_duel, uint32_t* length) {
 		insert_value<uint32_t>(query, peffect->get_handler()->data.code);
 		loc_info info = peffect->get_handler()->get_info_location();
 		insert_value<uint8_t>(query, info.controler);
-		insert_value<uint8_t>(query, info.location);
+		insert_value<uint8_t>(query, static_cast<uint8_t>(info.location));
 		insert_value<uint32_t>(query, info.sequence);
 		insert_value<uint32_t>(query, info.position);
 		insert_value<uint8_t>(query, ch.triggering_controler);
