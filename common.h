@@ -41,6 +41,7 @@
 #define LOCATION_STZONE  0x400
 #define LOCATION_MMZONE  0x800
 #define LOCATION_EMZONE  0x1000
+#define LOCATION_ADMIN   0x2000
 //Locations redirect
 #define LOCATION_DECKBOT	0x10001		//Return to deck bottom
 #define LOCATION_DECKSHF	0x20001		//Return to deck and shuffle
