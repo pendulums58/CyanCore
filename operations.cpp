@@ -493,7 +493,7 @@ bool field::process(Processors::Draw& arg) {
 				for(auto& pcard : drawn_set) {
 					message->write<uint32_t>(pcard->data.code);
 					message->write<uint8_t>(pcard->current.controler);
-					message->write<uint8_t>(static_cast<uint8_t>(pcard->current.location));
+					message->write<uint16_t>(pcard->current.location);
 					message->write<uint32_t>(pcard->current.sequence);
 				}
 				shuffle(playerid, LOCATION_HAND);
@@ -1003,10 +1003,16 @@ bool field::process(Processors::XyzOverlay& arg) {
 				remove_unique_card(pcard);
 			if(pcard->equiping_target)
 				pcard->unequip();
+			if(pcard->admin_target)
+				pcard->admin_remove();
 			for(auto cit = pcard->equiping_cards.begin(); cit != pcard->equiping_cards.end();) {
 				card* equipc = *cit++;
 				des.insert(equipc);
 				equipc->unequip();
+			}
+			if(pcard->admin_card) {
+				pcard->admin_card->admin_remove();
+				des.insert(pcard->admin_card);
 			}
 			pcard->clear_card_target();
 			auto message = pduel->new_message(MSG_MOVE);
@@ -2939,7 +2945,7 @@ bool field::process(Processors::SpellSetGroup& arg) {
 			for(auto& pcard : core.set_group_set) {
 				message->write<uint32_t>(pcard->data.code);
 				message->write<uint8_t>(pcard->current.controler);
-				message->write<uint8_t>(static_cast<uint8_t>(pcard->current.location));
+				message->write<uint16_t>(pcard->current.location);
 				message->write<uint32_t>(pcard->current.sequence);
 			}
 		}
@@ -2956,7 +2962,7 @@ bool field::process(Processors::SpellSetGroup& arg) {
 		if(ct <= 1)
 			return FALSE;
 		auto message = pduel->new_message(MSG_SHUFFLE_SET_CARD);
-		message->write<uint8_t>(LOCATION_SZONE);
+		message->write<uint16_t>(LOCATION_SZONE);
 		message->write<uint8_t>(ct);
 		uint8_t i = 0;
 		for(const auto& pcard : core.operated_set) {
@@ -4646,6 +4652,8 @@ bool field::process(Processors::SendTo& arg) {
 			uint16_t nloc = pcard->current.location;
 			if(pcard->equiping_target)
 				pcard->unequip();
+			if(pcard->admin_target)
+				pcard->admin_remove();
 			if(pcard->equiping_cards.size()) {
 				for(auto csit = pcard->equiping_cards.begin(); csit != pcard->equiping_cards.end();) {
 					card* equipc = *(csit++);
@@ -4653,6 +4661,10 @@ bool field::process(Processors::SendTo& arg) {
 					if(equipc->current.location == LOCATION_SZONE)
 						equipings.insert(equipc);
 				}
+			}
+			if(pcard->admin_card) {
+				pcard->admin_card->admin_remove();
+				equipings.insert(pcard->admin_card);
 			}
 			pcard->clear_card_target();
 			if(nloc == LOCATION_HAND) {
@@ -5070,9 +5082,16 @@ bool field::process(Processors::MoveToField& arg) {
 			if(target->xyz_materials.size()) {
 				send_to(card_set{ target->xyz_materials.begin(), target->xyz_materials.end() }, nullptr, REASON_LOST_TARGET + REASON_RULE, PLAYER_NONE, PLAYER_NONE, LOCATION_GRAVE, 0, POS_FACEUP);
 			}
+			if(target->admin_card) {
+				card* acard = target->admin_card;
+				acard->admin_remove();
+				send_to(acard, nullptr, REASON_LOST_TARGET + REASON_RULE, PLAYER_NONE, PLAYER_NONE, LOCATION_GRAVE, 0, POS_FACEUP);
+			}
 		}
 		if((target->previous.location == LOCATION_SZONE) && target->equiping_target)
 			target->unequip();
+		if(target->admin_target)
+			target->admin_remove();
 		if(target->current.location == LOCATION_MZONE) {
 			effect_set eset;
 			filter_player_effect(0, EFFECT_MUST_USE_MZONE, &eset, false);
@@ -5278,7 +5297,7 @@ bool field::process(Processors::ChangePos& arg) {
 			auto message = pduel->new_message(MSG_POS_CHANGE);
 			message->write<uint32_t>(pcard->data.code);
 			message->write<uint8_t>(pcard->current.controler);
-			message->write<uint8_t>(static_cast<uint8_t>(pcard->current.location));
+			message->write<uint16_t>(pcard->current.location);
 			message->write<uint8_t>(pcard->current.sequence);
 			message->write<uint8_t>(pcard->previous.position);
 			message->write<uint8_t>(pcard->current.position);
@@ -5329,6 +5348,13 @@ bool field::process(Processors::ChangePos& arg) {
 			}
 			if((npos & POS_FACEDOWN) && pcard->equiping_target)
 				pcard->unequip();
+			if((npos & POS_FACEDOWN) && pcard->admin_card) {
+				card* acard = pcard->admin_card;
+				acard->admin_remove();
+				equipings.insert(acard);
+			}
+			if((npos & POS_FACEDOWN) && pcard->admin_target)
+				pcard->admin_remove();
 			if(trapmonster) {
 				refresh_location_info_instant();
 				move_to_field(pcard, pcard->current.controler, pcard->current.controler, LOCATION_SZONE, POS_FACEDOWN, FALSE, 2);

@@ -836,7 +836,7 @@ LUA_STATIC_FUNCTION(ConfirmDecktop) {
 		const auto& pcard = *cit;
 		message->write<uint32_t>(pcard->data.code);
 		message->write<uint8_t>(pcard->current.controler);
-		message->write<uint8_t>(static_cast<uint8_t>(pcard->current.location));
+		message->write<uint16_t>(pcard->current.location);
 		message->write<uint32_t>(pcard->current.sequence);
 	}
 	return yieldk({
@@ -866,7 +866,7 @@ LUA_STATIC_FUNCTION(ConfirmExtratop) {
 		const auto& pcard = *cit;
 		message->write<uint32_t>(pcard->data.code);
 		message->write<uint8_t>(pcard->current.controler);
-		message->write<uint8_t>(static_cast<uint8_t>(pcard->current.location));
+		message->write<uint16_t>(pcard->current.location);
 		message->write<uint32_t>(pcard->current.sequence);
 	}
 	return yieldk({
@@ -912,7 +912,7 @@ LUA_STATIC_FUNCTION(ConfirmCards) {
 		message->write<uint32_t>(1);
 		message->write<uint32_t>(pcard->data.code);
 		message->write<uint8_t>(pcard->current.controler);
-		message->write<uint8_t>(static_cast<uint8_t>(pcard->current.location));
+		message->write<uint16_t>(pcard->current.location);
 		message->write<uint32_t>(pcard->current.sequence);
 		raise_confirm_event(pcard);
 		field.raise_event(pcard, EVENT_CONFIRM, trigeff, reason, field.core.reason_player, revealingplayer, 0);
@@ -921,7 +921,7 @@ LUA_STATIC_FUNCTION(ConfirmCards) {
 		for(auto& _pcard : pgroup->container) {
 			message->write<uint32_t>(_pcard->data.code);
 			message->write<uint8_t>(_pcard->current.controler);
-			message->write<uint8_t>(static_cast<uint8_t>(_pcard->current.location));
+			message->write<uint16_t>(_pcard->current.location);
 			message->write<uint32_t>(_pcard->current.sequence);
 			raise_confirm_event(_pcard);
 		}
@@ -1421,7 +1421,7 @@ LUA_STATIC_FUNCTION(ShuffleSetCard) {
 	auto& field = pduel->game_field;
 	auto& list = (loc == LOCATION_MZONE) ? field->player[tp].list_mzone : field->player[tp].list_szone;
 	auto message = pduel->new_message(MSG_SHUFFLE_SET_CARD);
-	message->write<uint8_t>(static_cast<uint8_t>(loc));
+	message->write<uint16_t>(loc);
 	message->write<uint8_t>(ct);
 	for(auto* pcard : pgroup->container) {
 		message->write(pcard->get_info_location());

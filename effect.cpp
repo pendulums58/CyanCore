@@ -44,7 +44,7 @@ int32_t effect::is_can_be_forbidden() {
 int32_t effect::is_available() {
 	if (type & EFFECT_TYPE_ACTIONS)
 		return FALSE;
-	if ((type & (EFFECT_TYPE_SINGLE | EFFECT_TYPE_XMATERIAL)) && !(type & EFFECT_TYPE_FIELD)) {
+	if ((type & (EFFECT_TYPE_SINGLE | EFFECT_TYPE_XMATERIAL | EFFECT_TYPE_ADMIN)) && !(type & EFFECT_TYPE_FIELD)) {
 		card* phandler = get_handler();
 		card* powner = get_owner();
 		if (phandler->current.controler == PLAYER_NONE && code != EFFECT_ADD_SETCODE && code != EFFECT_ADD_CODE && code != EFFECT_REVIVE_LIMIT)
@@ -427,7 +427,7 @@ int32_t effect::is_activate_check(uint8_t playerid, const tevent& e, int32_t neg
 int32_t effect::is_target(card* pcard) {
 	if(type & EFFECT_TYPE_ACTIONS)
 		return FALSE;
-	if(type & (EFFECT_TYPE_SINGLE | EFFECT_TYPE_EQUIP | EFFECT_TYPE_XMATERIAL) && !(type & EFFECT_TYPE_FIELD))
+	if(type & (EFFECT_TYPE_SINGLE | EFFECT_TYPE_EQUIP | EFFECT_TYPE_XMATERIAL | EFFECT_TYPE_ADMIN) && !(type & EFFECT_TYPE_FIELD))
 		return TRUE;
 	if((type & EFFECT_TYPE_TARGET) && !(type & EFFECT_TYPE_FIELD)) {
 		return is_fit_target_function(pcard);
@@ -759,6 +759,8 @@ card* effect::get_real_handler() const {
 		return active_handler;
 	if(type & EFFECT_TYPE_XMATERIAL)
 		return handler->overlay_target ? handler->overlay_target : handler->pre_overlay_target;
+	if(type & EFFECT_TYPE_ADMIN)
+		return handler->admin_target ? handler->admin_target : handler->pre_admin_target;
 	return nullptr;
 }
 card* effect::get_owner() const {
@@ -784,6 +786,8 @@ uint8_t effect::get_handler_player() {
 int32_t effect::in_range(card* pcard) {
 	if(type & EFFECT_TYPE_XMATERIAL)
 		return handler->overlay_target ? TRUE : FALSE;
+	if(type & EFFECT_TYPE_ADMIN)
+		return handler->admin_target ? TRUE : FALSE;
 	auto real_range = range;
 	if((range & (LOCATION_MMZONE | LOCATION_EMZONE))) {
 		real_range &= ~(LOCATION_MMZONE | LOCATION_EMZONE);
@@ -799,6 +803,8 @@ int32_t effect::is_in_range_of_symbolic_mzone(card* pcard) {
 int32_t effect::in_range(const chain& ch) {
 	if(type & EFFECT_TYPE_XMATERIAL)
 		return handler->overlay_target ? TRUE : FALSE;
+	if(type & EFFECT_TYPE_ADMIN)
+		return handler->admin_target ? TRUE : FALSE;
 	return range & ch.triggering_location;
 }
 void effect::set_activate_location() {

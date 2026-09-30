@@ -979,6 +979,36 @@ LUA_FUNCTION(RemoveOverlayCard) {
 		return 1;
 	});
 }
+LUA_FUNCTION(GetAdmin) {
+	interpreter::pushobject(L, self->admin_card);
+	return 1;
+}
+LUA_FUNCTION(GetAdminTarget) {
+	interpreter::pushobject(L, self->admin_target);
+	return 1;
+}
+LUA_FUNCTION(GetPreviousAdminTarget) {
+	interpreter::pushobject(L, self->pre_admin_target);
+	return 1;
+}
+LUA_FUNCTION(SetAdmin) {
+	check_action_permission(L);
+	auto target = lua_get<card*, true>(L, 2);
+	int32_t res = self->admin_set(target);
+	lua_pushboolean(L, res == 0 ? TRUE : FALSE);
+	lua_pushinteger(L, res);
+	return 2;
+}
+LUA_FUNCTION(RemoveAdmin) {
+	check_action_permission(L);
+	if(!self->admin_target) {
+		lua_pushboolean(L, FALSE);
+		return 1;
+	}
+	self->admin_remove();
+	lua_pushboolean(L, TRUE);
+	return 1;
+}
 LUA_FUNCTION(GetAttackedGroup) {
 	auto pgroup = pduel->new_group();
 	for(auto& cit : self->attacked_cards) {
@@ -1777,7 +1807,7 @@ LUA_FUNCTION(RemoveAllCounters) {
 		auto message = pduel->new_message(MSG_REMOVE_COUNTER);
 		message->write<uint16_t>(cmit.first);
 		message->write<uint8_t>(self->current.controler);
-		message->write<uint8_t>(static_cast<uint8_t>(self->current.location));
+		message->write<uint16_t>(self->current.location);
 		message->write<uint8_t>(self->current.sequence);
 		message->write<uint16_t>(cmit.second[0] + cmit.second[1]);
 		total += cmit.second[0] + cmit.second[1];

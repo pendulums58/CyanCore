@@ -110,7 +110,7 @@ void field::reload_field_info() {
 		message->write<uint32_t>(peffect->get_handler()->data.code);
 		message->write(peffect->get_handler()->get_info_location());
 		message->write<uint8_t>(ch.triggering_controler);
-		message->write<uint8_t>(static_cast<uint8_t>(ch.triggering_location));
+		message->write<uint16_t>(ch.triggering_location);
 		message->write<uint32_t>(ch.triggering_sequence);
 		message->write<uint64_t>(peffect->description);
 	}

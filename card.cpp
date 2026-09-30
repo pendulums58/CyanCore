@@ -136,41 +136,45 @@ void card::get_infos(uint32_t query_flag) {
 	CHECK_AND_INSERT(QUERY_REASON, current.reason);
 	CHECK_AND_INSERT(QUERY_COVER, cover);
 	if(query_flag & QUERY_REASON_CARD) {
-		insert_value<uint16_t>(pduel->query_buffer, sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint64_t));
+		insert_value<uint16_t>(pduel->query_buffer, sizeof(uint32_t) + sizeof(uint8_t) + sizeof(uint16_t) + sizeof(uint32_t) + sizeof(uint32_t));
 		insert_value<uint32_t>(pduel->query_buffer, QUERY_REASON_CARD);
 		if(current.reason_card) {
 			loc_info info = current.reason_card->get_info_location();
 			insert_value<uint8_t>(pduel->query_buffer, info.controler);
-			insert_value<uint8_t>(pduel->query_buffer, static_cast<uint8_t>(info.location));
+			insert_value<uint16_t>(pduel->query_buffer, info.location);
 			insert_value<uint32_t>(pduel->query_buffer, info.sequence);
 			insert_value<uint32_t>(pduel->query_buffer, info.position);
 		} else {
+			insert_value<uint8_t>(pduel->query_buffer, 0);
 			insert_value<uint16_t>(pduel->query_buffer, 0);
-			insert_value<uint64_t>(pduel->query_buffer, 0);
+			insert_value<uint32_t>(pduel->query_buffer, 0);
+			insert_value<uint32_t>(pduel->query_buffer, 0);
 		}
 	}
 	if(query_flag & QUERY_EQUIP_CARD) {
-		insert_value<uint16_t>(pduel->query_buffer, sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint64_t));
+		insert_value<uint16_t>(pduel->query_buffer, sizeof(uint32_t) + sizeof(uint8_t) + sizeof(uint16_t) + sizeof(uint32_t) + sizeof(uint32_t));
 		insert_value<uint32_t>(pduel->query_buffer, QUERY_EQUIP_CARD);
 		if(equiping_target) {
 			loc_info info = equiping_target->get_info_location();
 			insert_value<uint8_t>(pduel->query_buffer, info.controler);
-			insert_value<uint8_t>(pduel->query_buffer, static_cast<uint8_t>(info.location));
+			insert_value<uint16_t>(pduel->query_buffer, info.location);
 			insert_value<uint32_t>(pduel->query_buffer, info.sequence);
 			insert_value<uint32_t>(pduel->query_buffer, info.position);
 		} else {
+			insert_value<uint8_t>(pduel->query_buffer, 0);
 			insert_value<uint16_t>(pduel->query_buffer, 0);
-			insert_value<uint64_t>(pduel->query_buffer, 0);
+			insert_value<uint32_t>(pduel->query_buffer, 0);
+			insert_value<uint32_t>(pduel->query_buffer, 0);
 		}
 	}
 	if(query_flag & QUERY_TARGET_CARD) {
-		insert_value<uint16_t>(pduel->query_buffer, sizeof(uint32_t) + sizeof(uint32_t) + static_cast<uint16_t>(effect_target_cards.size()) * (sizeof(uint16_t) + sizeof(uint64_t)));
+		insert_value<uint16_t>(pduel->query_buffer, sizeof(uint32_t) + sizeof(uint32_t) + static_cast<uint16_t>(effect_target_cards.size()) * (sizeof(uint8_t) + sizeof(uint16_t) + sizeof(uint32_t) + sizeof(uint32_t)));
 		insert_value<uint32_t>(pduel->query_buffer, QUERY_TARGET_CARD);
 		insert_value<uint32_t>(pduel->query_buffer, static_cast<uint32_t>(effect_target_cards.size()));
 		for(auto& pcard : effect_target_cards) {
 			loc_info info = pcard->get_info_location();
 			insert_value<uint8_t>(pduel->query_buffer, info.controler);
-			insert_value<uint8_t>(pduel->query_buffer, static_cast<uint8_t>(info.location));
+			insert_value<uint16_t>(pduel->query_buffer, info.location);
 			insert_value<uint32_t>(pduel->query_buffer, info.sequence);
 			insert_value<uint32_t>(pduel->query_buffer, info.position);
 		}
@@ -225,6 +229,8 @@ int32_t card::is_related_to_chains() {
 loc_info card::get_info_location() {
 	if(overlay_target) {
 		return { overlay_target->current.controler, static_cast<uint16_t>(overlay_target->current.location | LOCATION_OVERLAY), overlay_target->current.sequence, current.sequence };
+	} else if(admin_target) {
+		return { admin_target->current.controler, static_cast<uint16_t>(admin_target->current.location | LOCATION_ADMIN), admin_target->current.sequence, 0 };
 	} else {
 		return { current.controler, current.location , current.sequence, current.position };
 	}
@@ -1628,6 +1634,62 @@ void card::xyz_remove(card* mat) {
 			pduel->game_field->remove_effect(peffect);
 	}
 }
+int32_t card::admin_set(card* target) {
+	if(admin_target)
+		return -1;
+	if(target->admin_card)
+		return -3;
+	duel::duel_message* move_msg = nullptr;
+	if(current.location != 0) {
+		move_msg = pduel->new_message(MSG_MOVE);
+		move_msg->write<uint32_t>(data.code);
+		move_msg->write(get_info_location());
+		pduel->game_field->remove_card(this);
+		pduel->game_field->add_to_disable_check_list(this);
+	}
+	admin_target = target;
+	target->admin_card = this;
+	pre_admin_target = nullptr;
+	current.controler = target->current.controler;
+	current.location = LOCATION_ADMIN;
+	current.sequence = 0;
+	current.position = POS_FACEUP;
+	if(move_msg) {
+		move_msg->write(get_info_location());
+		move_msg->write<uint32_t>(0);
+	}
+	for(auto& eit : admin_effect) {
+		effect* peffect = eit.second;
+		if(peffect->type & EFFECT_TYPE_FIELD)
+			pduel->game_field->add_effect(peffect);
+	}
+	// 관계 설정은 MSG_MOVE 가 한다. 이 메시지는 정보용이며 클라는 바이트만 소비한다.
+	auto message = pduel->new_message(MSG_SET_ADMIN);
+	message->write(get_info_location());
+	message->write(target->get_info_location());
+	return 0;
+}
+void card::admin_remove() {
+	if(!admin_target)
+		return;
+	for(auto& eit : admin_effect) {
+		effect* peffect = eit.second;
+		if(peffect->type & EFFECT_TYPE_FIELD)
+			pduel->game_field->remove_effect(peffect);
+	}
+	admin_target->admin_card = nullptr;
+	previous.controler = current.controler;
+	previous.location = current.location;
+	previous.sequence = current.sequence;
+	previous.pzone = current.pzone;
+	current.controler = PLAYER_NONE;
+	current.location = 0;
+	current.sequence = 0;
+	pre_admin_target = std::exchange(admin_target, nullptr);
+	// 관계 설정은 MSG_MOVE 가 한다. 이 메시지는 정보용이며 클라는 바이트만 소비한다.
+	auto message = pduel->new_message(MSG_REMOVE_ADMIN);
+	message->write(get_info_location());
+}
 void card::apply_field_effect() {
 	if (current.controler == PLAYER_NONE)
 		return;
@@ -1750,6 +1812,12 @@ int32_t card::add_effect(effect* peffect) {
 			check_target = { overlay_target };
 		else
 			check_target.clear();
+	} else if(peffect->type & EFFECT_TYPE_ADMIN) {
+		eit = admin_effect.emplace(peffect->code, peffect);
+		if(admin_target)
+			check_target = { admin_target };
+		else
+			check_target.clear();
 	} else if (peffect->type & EFFECT_TYPE_FIELD) {
 		eit = field_effect.emplace(peffect->code, peffect);
 	} else
@@ -1841,6 +1909,12 @@ void card::remove_effect(effect* peffect, effect_container::iterator it) {
 			check_target = { overlay_target };
 		else
 			check_target.clear();
+	} else if(peffect->type & EFFECT_TYPE_ADMIN) {
+		admin_effect.erase(it);
+		if(admin_target)
+			check_target = { admin_target };
+		else
+			check_target.clear();
 	} else if (peffect->type & EFFECT_TYPE_FIELD) {
 		check_target.clear();
 		if (peffect->is_available() && peffect->is_disable_related()) {
@@ -1880,7 +1954,7 @@ void card::remove_effect(effect* peffect, effect_container::iterator it) {
 			auto message = pduel->new_message(MSG_REMOVE_COUNTER);
 			message->write<uint16_t>(cmit->first);
 			message->write<uint8_t>(current.controler);
-			message->write<uint8_t>(static_cast<uint8_t>(current.location));
+			message->write<uint16_t>(current.location);
 			message->write<uint8_t>(current.sequence);
 			message->write<uint16_t>(cmit->second[0] + cmit->second[1]);
 			counters.erase(cmit);
@@ -2033,7 +2107,7 @@ void card::reset(uint32_t id, uint32_t reset_type) {
 					auto message = pduel->new_message(MSG_REMOVE_COUNTER);
 					message->write<uint16_t>(rm->first);
 					message->write<uint8_t>(current.controler);
-					message->write<uint8_t>(static_cast<uint8_t>(current.location));
+					message->write<uint16_t>(current.location);
 					message->write<uint8_t>(current.sequence);
 					message->write<uint16_t>(rm->second[1]);
 					rm->second[1] = 0;
@@ -2250,7 +2324,7 @@ int32_t card::add_counter(uint8_t playerid, uint16_t countertype, uint16_t count
 	auto message = pduel->new_message(MSG_ADD_COUNTER);
 	message->write<uint16_t>(cttype);
 	message->write<uint8_t>(current.controler);
-	message->write<uint8_t>(static_cast<uint8_t>(current.location));
+	message->write<uint16_t>(current.location);
 	message->write<uint8_t>(current.sequence);
 	message->write<uint16_t>(pcount);
 	pduel->game_field->raise_single_event(this, nullptr, EVENT_ADD_COUNTER + countertype, pduel->game_field->core.reason_effect, REASON_EFFECT, playerid, playerid, pcount);
@@ -2274,7 +2348,7 @@ int32_t card::remove_counter(uint16_t countertype, uint16_t count) {
 	auto message = pduel->new_message(MSG_REMOVE_COUNTER);
 	message->write<uint16_t>(countertype);
 	message->write<uint8_t>(current.controler);
-	message->write<uint8_t>(static_cast<uint8_t>(current.location));
+	message->write<uint16_t>(current.location);
 	message->write<uint8_t>(current.sequence);
 	message->write<uint16_t>(count);
 	return TRUE;
@@ -2431,6 +2505,17 @@ void card::filter_effect(int32_t code, effect_set* eset, uint8_t sort) {
 				eset->push_back(peffect);
 		}
 	}
+	if(admin_card) {
+		rg = admin_card->admin_effect.equal_range(code);
+		for(auto eit = rg.first; eit != rg.second;) {
+			peffect = eit->second;
+			++eit;
+			if(peffect->type & EFFECT_TYPE_FIELD)
+				continue;
+			if(peffect->is_available() && is_affect_by_effect(peffect))
+				eset->push_back(peffect);
+		}
+	}
 	rg = pduel->game_field->effects.aura_effect.equal_range(code);
 	for(auto eit = rg.first; eit != rg.second;) {
 		peffect = eit->second;
@@ -2479,6 +2564,15 @@ void card::filter_single_continuous_effect(int32_t code, effect_set* eset, uint8
 			eset->push_back(peffect);
 		}
 	}
+	if(admin_card) {
+		rg = admin_card->admin_effect.equal_range(code);
+		for(; rg.first != rg.second; ++rg.first) {
+			effect* peffect = rg.first->second;
+			if(peffect->type & EFFECT_TYPE_FIELD)
+				continue;
+			eset->push_back(peffect);
+		}
+	}
 	if(sort)
 		std::sort(eset->begin(), eset->end(), effect_sort_id);
 }
@@ -2513,6 +2607,15 @@ void card::filter_immune_effect() {
 			immune_effect.push_back(peffect);
 		}
 	}
+	if(admin_card) {
+		rg = admin_card->admin_effect.equal_range(EFFECT_IMMUNE_EFFECT);
+		for(; rg.first != rg.second; ++rg.first) {
+			peffect = rg.first->second;
+			if(peffect->type & EFFECT_TYPE_FIELD)
+				continue;
+			immune_effect.push_back(peffect);
+		}
+	}
 	rg = pduel->game_field->effects.aura_effect.equal_range(EFFECT_IMMUNE_EFFECT);
 	for (; rg.first != rg.second; ++rg.first) {
 		peffect = rg.first->second;
@@ -2537,6 +2640,8 @@ void card::filter_disable_related_cards() {
 					pduel->game_field->add_to_disable_check_list(target);
 			} else if((peffect->type & EFFECT_TYPE_XMATERIAL) && overlay_target)
 				pduel->game_field->add_to_disable_check_list(overlay_target);
+			else if((peffect->type & EFFECT_TYPE_ADMIN) && admin_target)
+				pduel->game_field->add_to_disable_check_list(admin_target);
 		}
 	}
 }
@@ -2840,6 +2945,17 @@ effect* card::is_affected_by_effect(int32_t code) {
 				return peffect;
 		}
 	}
+	if(admin_card) {
+		rg = admin_card->admin_effect.equal_range(code);
+		for(auto eit = rg.first; eit != rg.second;) {
+			peffect = eit->second;
+			++eit;
+			if(peffect->type & EFFECT_TYPE_FIELD)
+				continue;
+			if(peffect->is_available() && is_affect_by_effect(peffect))
+				return peffect;
+		}
+	}
 	rg = pduel->game_field->effects.aura_effect.equal_range(code);
 	for(auto eit = rg.first; eit != rg.second;) {
 		peffect = eit->second;
@@ -2900,6 +3016,17 @@ effect* card::is_affected_by_effect(int32_t code, card* target) {
 				return peffect;
 		}
 	}
+	if(admin_card) {
+		rg = admin_card->admin_effect.equal_range(code);
+		for(auto eit = rg.first; eit != rg.second;) {
+			peffect = eit->second;
+			++eit;
+			if(peffect->type & EFFECT_TYPE_FIELD)
+				continue;
+			if(peffect->is_available() && is_affect_by_effect(peffect) && peffect->get_value(target))
+				return peffect;
+		}
+	}
 	rg = pduel->game_field->effects.aura_effect.equal_range(code);
 	for(auto eit = rg.first; eit != rg.second;) {
 		peffect = eit->second;
@@ -2947,6 +3074,16 @@ void card::get_card_effect(uint32_t code, effect_set* eset) {
 			if (peffect->type & EFFECT_TYPE_FIELD)
 				continue;
 			if ((code == 0 || peffect->code == code) && peffect->is_available() && is_affect_by_effect(peffect))
+				eset->push_back(peffect);
+		}
+	}
+	if(admin_card) {
+		for(auto rg = admin_card->admin_effect.begin(); rg != admin_card->admin_effect.end();) {
+			peffect = rg->second;
+			++rg;
+			if(peffect->type & EFFECT_TYPE_FIELD)
+				continue;
+			if((code == 0 || peffect->code == code) && peffect->is_available() && is_affect_by_effect(peffect))
 				eset->push_back(peffect);
 		}
 	}

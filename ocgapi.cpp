@@ -287,11 +287,11 @@ void* OCG_DuelQueryField(OCG_Duel ocg_duel, uint32_t* length) {
 		insert_value<uint32_t>(query, peffect->get_handler()->data.code);
 		loc_info info = peffect->get_handler()->get_info_location();
 		insert_value<uint8_t>(query, info.controler);
-		insert_value<uint8_t>(query, static_cast<uint8_t>(info.location));
+		insert_value<uint16_t>(query, info.location);
 		insert_value<uint32_t>(query, info.sequence);
 		insert_value<uint32_t>(query, info.position);
 		insert_value<uint8_t>(query, ch.triggering_controler);
-		insert_value<uint8_t>(query, static_cast<uint8_t>(ch.triggering_location));
+		insert_value<uint16_t>(query, ch.triggering_location);
 		insert_value<uint32_t>(query, ch.triggering_sequence);
 		insert_value<uint64_t>(query, peffect->description);
 	}

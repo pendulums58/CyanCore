@@ -3701,7 +3701,7 @@ bool field::process(Processors::AddChain& arg) {
 		message->write<uint32_t>(phandler->data.code);
 		message->write(phandler->get_info_location());
 		message->write<uint8_t>(clit.triggering_controler);
-		message->write<uint8_t>(static_cast<uint8_t>(clit.triggering_location));
+		message->write<uint16_t>(clit.triggering_location);
 		message->write<uint32_t>(clit.triggering_sequence);
 		message->write<uint64_t>(peffect->description);
 		message->write<uint32_t>(core.current_chain.size() + 1);

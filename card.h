@@ -159,6 +159,9 @@ public:
 	card* pre_equip_target{};
 	card* overlay_target{};
 	card* pre_overlay_target{};
+	card* admin_card{};
+	card* admin_target{};
+	card* pre_admin_target{};
 	relation_map relations;
 	counter_map counters;
 	effect_count indestructable_effects;
@@ -175,6 +178,7 @@ public:
 	effect_container equip_effect;
 	effect_container target_effect;
 	effect_container xmaterial_effect;
+	effect_container admin_effect;
 	effect_indexer indexer;
 	effect_relation relate_effect;
 	effect_set_v immune_effect;
@@ -260,6 +264,8 @@ public:
 	int32_t get_old_union_count();
 	void xyz_add(card* mat);
 	void xyz_remove(card* mat);
+	int32_t admin_set(card* target);
+	void admin_remove();
 	void apply_field_effect();
 	void cancel_field_effect();
 	void enable_field_effect(bool enabled);
