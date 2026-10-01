@@ -1003,16 +1003,15 @@ bool field::process(Processors::XyzOverlay& arg) {
 				remove_unique_card(pcard);
 			if(pcard->equiping_target)
 				pcard->unequip();
-			if(pcard->admin_target)
-				pcard->admin_remove();
 			for(auto cit = pcard->equiping_cards.begin(); cit != pcard->equiping_cards.end();) {
 				card* equipc = *cit++;
 				des.insert(equipc);
 				equipc->unequip();
 			}
 			if(pcard->admin_card) {
-				pcard->admin_card->admin_remove();
-				des.insert(pcard->admin_card);
+				card* acard = pcard->admin_card;
+				acard->admin_remove();
+				des.insert(acard);
 			}
 			pcard->clear_card_target();
 			auto message = pduel->new_message(MSG_MOVE);
@@ -1020,6 +1019,8 @@ bool field::process(Processors::XyzOverlay& arg) {
 			message->write(pcard->get_info_location());
 			if(pcard->overlay_target) {
 				pcard->overlay_target->xyz_remove(pcard);
+			} else if(pcard->admin_target) {
+				pcard->admin_remove();
 			} else {
 				remove_card(pcard);
 				add_to_disable_check_list(pcard);
@@ -1757,7 +1758,7 @@ bool field::process(Processors::Equip& arg) {
 			cset.insert(equip_card);
 			raise_single_event(target, &cset, EVENT_EQUIP, core.reason_effect, 0, core.reason_player, PLAYER_NONE, 0);
 			raise_event(std::move(cset), EVENT_EQUIP, core.reason_effect, 0, core.reason_player, PLAYER_NONE, 0);
-			core.hint_timing[target->overlay_target ? target->overlay_target->current.controler : target->current.controler] |= TIMING_EQUIP;
+			core.hint_timing[target->overlay_target ? target->overlay_target->current.controler : target->admin_target ? target->admin_target->current.controler : target->current.controler] |= TIMING_EQUIP;
 			process_single_event();
 			process_instant_event();
 			return FALSE;
@@ -3962,7 +3963,7 @@ bool field::process(Processors::Destroy& arg) {
 				continue;
 			}
 			pcard->current.reason |= REASON_DESTROY;
-			core.hint_timing[pcard->overlay_target ? pcard->overlay_target->current.controler : pcard->current.controler] |= TIMING_DESTROY;
+			core.hint_timing[pcard->overlay_target ? pcard->overlay_target->current.controler : pcard->admin_target ? pcard->admin_target->current.controler : pcard->current.controler] |= TIMING_DESTROY;
 			raise_single_event(pcard, nullptr, EVENT_DESTROY, pcard->current.reason_effect, pcard->current.reason, pcard->current.reason_player, 0, 0);
 		}
 		adjust_instant();
@@ -4487,7 +4488,7 @@ bool field::process(Processors::SendTo& arg) {
 		uint8_t playerid = pcard->sendto_param.playerid & 0x7;
 		uint16_t dest = pcard->sendto_param.location;
 		uint8_t seq = pcard->sendto_param.sequence;
-		uint8_t control_player = pcard->overlay_target ? pcard->overlay_target->current.controler : pcard->current.controler;
+		uint8_t control_player = pcard->overlay_target ? pcard->overlay_target->current.controler : pcard->admin_target ? pcard->admin_target->current.controler : pcard->current.controler;
 		if(dest == LOCATION_GRAVE) {
 			core.hint_timing[control_player] |= TIMING_TOGRAVE;
 		} else if(dest == LOCATION_HAND) {
@@ -4507,6 +4508,9 @@ bool field::process(Processors::SendTo& arg) {
 			if(pcard->overlay_target) {
 				param->detach.insert(pcard->overlay_target);
 				pcard->overlay_target->xyz_remove(pcard);
+			}
+			if(pcard->admin_target) {
+				pcard->admin_remove();
 			}
 			move_card(playerid, pcard, dest, seq);
 			pcard->current.position = pcard->sendto_param.position;
@@ -4556,6 +4560,9 @@ bool field::process(Processors::SendTo& arg) {
 		if(pcard->overlay_target) {
 			param->detach.insert(pcard->overlay_target);
 			pcard->overlay_target->xyz_remove(pcard);
+		}
+		if(pcard->admin_target) {
+			pcard->admin_remove();
 		}
 		move_card(pcard->current.controler, pcard, LOCATION_SZONE, seq);
 		pcard->current.position = POS_FACEUP;
@@ -4647,7 +4654,7 @@ bool field::process(Processors::SendTo& arg) {
 	}
 	case 10: {
 		card_set tohand, todeck, tograve, remove, discard, released, destroyed;
-		card_set equipings, overlays;
+		card_set equipings, overlays, admins;
 		for(auto& pcard : targets->container) {
 			uint16_t nloc = pcard->current.location;
 			if(pcard->equiping_target)
@@ -4663,8 +4670,7 @@ bool field::process(Processors::SendTo& arg) {
 				}
 			}
 			if(pcard->admin_card) {
-				pcard->admin_card->admin_remove();
-				equipings.insert(pcard->admin_card);
+				admins.insert(pcard->admin_card);
 			}
 			pcard->clear_card_target();
 			if(nloc == LOCATION_HAND) {
@@ -4746,6 +4752,8 @@ bool field::process(Processors::SendTo& arg) {
 			destroy(std::move(equipings), nullptr, REASON_RULE + REASON_LOST_TARGET, PLAYER_NONE);
 		if(overlays.size())
 			send_to(std::move(overlays), nullptr, REASON_RULE + REASON_LOST_TARGET, PLAYER_NONE, PLAYER_NONE, LOCATION_GRAVE, 0, POS_FACEUP);
+		if(admins.size())
+			send_to(std::move(admins), nullptr, REASON_RULE + REASON_LOST_TARGET, PLAYER_NONE, PLAYER_NONE, LOCATION_GRAVE, 0, POS_FACEUP);
 		adjust_instant();
 		return FALSE;
 	}
@@ -5065,6 +5073,8 @@ bool field::process(Processors::MoveToField& arg) {
 		message->write(target->get_info_location());
 		if(target->overlay_target)
 			target->overlay_target->xyz_remove(target);
+		if(target->admin_target)
+			target->admin_remove();
 		// call move_card()
 		move_card(playerid, target, location, target->temp.sequence, pzone);
 		target->current.position = returns.at<int32_t>(0);
