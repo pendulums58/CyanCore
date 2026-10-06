@@ -3066,6 +3066,19 @@ LUA_STATIC_FUNCTION(Hint) {
 	message->write<uint64_t>(desc);
 	return 0;
 }
+LUA_STATIC_FUNCTION(Announce) {
+	check_param_count(L, 1);
+	check_param<LuaParam::STRING>(L, 1);
+	size_t len = 0;
+	const char* pstr = lua_tolstring(L, 1, &len);
+	if(len > 256)
+		len = 256;
+	auto message = pduel->new_message(MSG_ANNOUNCE);
+	message->write<uint16_t>(static_cast<uint16_t>(len));
+	message->write(pstr, len);
+	message->write<uint8_t>(0);
+	return 0;
+}
 LUA_STATIC_FUNCTION(HintSelection) {
 	check_param_count(L, 1);
 	auto [pcard, pgroup] = lua_get_card_or_group(L, 1);

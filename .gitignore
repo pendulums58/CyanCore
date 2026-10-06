@@ -1,5 +1,4 @@
 [Bb]uild*/
-bin/
 libs/
 obj/
 subprojects/
@@ -11,6 +10,5 @@ tmp/
 *.exe
 *.pdb
 *.lib
-*.dll
 *.exp
 *.zip

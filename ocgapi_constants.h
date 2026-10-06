@@ -134,10 +134,13 @@
 #define REASON_SYNCHRO     0x80000
 #define REASON_RITUAL      0x100000
 #define REASON_XYZ         0x200000
+#define REASON_PAIR        0x400000
 #define REASON_REPLACE     0x1000000
 #define REASON_DRAW        0x2000000
 #define REASON_REDIRECT    0x4000000
 #define REASON_LINK        0x10000000
+#define REASON_ACCESS      0x20000000
+#define REASON_PAIRING     0x40000000
 
 /* Card Status */
 #define STATUS_DISABLED           0x1
@@ -308,6 +311,7 @@
 #define MSG_REMOVE_CARDS         190
 #define MSG_SET_ADMIN            200
 #define MSG_REMOVE_ADMIN         201
+#define MSG_ANNOUNCE             204
 
 /* Duel Hints */
 #define HINT_EVENT      1

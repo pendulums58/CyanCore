@@ -1009,6 +1009,67 @@ LUA_FUNCTION(RemoveAdmin) {
 	lua_pushboolean(L, TRUE);
 	return 1;
 }
+LUA_FUNCTION(GetPair) {
+	auto pgroup = pduel->new_group(self->paired_cards);
+	interpreter::pushobject(L, pgroup);
+	return 1;
+}
+LUA_FUNCTION(GetPrePair) {
+	auto pgroup = pduel->new_group(self->pre_paired_cards);
+	interpreter::pushobject(L, pgroup);
+	return 1;
+}
+LUA_FUNCTION(GetPairCount) {
+	lua_pushinteger(L, self->paired_cards.size());
+	return 1;
+}
+LUA_FUNCTION(SetPair) {
+	check_action_permission(L);
+	check_param_count(L, 2);
+	if(auto [pcard, pgroup] = lua_get_card_or_group<true>(L, 2); pcard) {
+		lua_pushboolean(L, self->pair_add(pcard) == 0 ? TRUE : FALSE);
+	} else if(pgroup) {
+		int32_t success = TRUE;
+		for(auto& pc : pgroup->container) {
+			if(self->pair_add(pc) != 0)
+				success = FALSE;
+		}
+		lua_pushboolean(L, success);
+	} else {
+		lua_pushboolean(L, FALSE);
+	}
+	return 1;
+}
+LUA_FUNCTION(Unpair) {
+	check_action_permission(L);
+	check_param_count(L, 2);
+	auto target = lua_get<card*, true>(L, 2);
+	self->pair_remove(target);
+	return 0;
+}
+LUA_FUNCTION(UnpairAll) {
+	check_action_permission(L);
+	self->unpair_all();
+	return 0;
+}
+LUA_FUNCTION(IsPairContains) {
+	check_param_count(L, 2);
+	if(auto [pcard, pgroup] = lua_get_card_or_group<true>(L, 2); pcard) {
+		lua_pushboolean(L, self->paired_cards.find(pcard) != self->paired_cards.end() ? TRUE : FALSE);
+	} else if(pgroup) {
+		int32_t found = FALSE;
+		for(auto& pc : pgroup->container) {
+			if(self->paired_cards.find(pc) != self->paired_cards.end()) {
+				found = TRUE;
+				break;
+			}
+		}
+		lua_pushboolean(L, found);
+	} else {
+		lua_pushboolean(L, FALSE);
+	}
+	return 1;
+}
 LUA_FUNCTION(GetAttackedGroup) {
 	auto pgroup = pduel->new_group();
 	for(auto& cit : self->attacked_cards) {
@@ -1380,6 +1441,38 @@ LUA_FUNCTION(EnableReviveLimit) {
 LUA_FUNCTION(CompleteProcedure) {
 	self->set_status(STATUS_PROC_COMPLETE, TRUE);
 	return 0;
+}
+LUA_FUNCTION(GetAccessLevel) {
+	card* acc = nullptr;
+	if(lua_gettop(L) > 1)
+		acc = lua_get<card*, true>(L, 2);
+	effect_set eset;
+	self->filter_effect(EFFECT_ACCESS_LEVEL, &eset);
+	for(const auto& peffect : eset) {
+		pduel->lua->add_param<LuaParam::CARD>(self);
+		if(acc)
+			pduel->lua->add_param<LuaParam::CARD>(acc);
+		lua_pushinteger(L, peffect->get_value(acc ? 2 : 1));
+		return 1;
+	}
+	lua_pushinteger(L, self->get_level());
+	return 1;
+}
+LUA_FUNCTION(GetAccessAttack) {
+	card* acc = nullptr;
+	if(lua_gettop(L) > 1)
+		acc = lua_get<card*, true>(L, 2);
+	effect_set eset;
+	self->filter_effect(EFFECT_ACCESS_ATTACK, &eset);
+	for(const auto& peffect : eset) {
+		pduel->lua->add_param<LuaParam::CARD>(self);
+		if(acc)
+			pduel->lua->add_param<LuaParam::CARD>(acc);
+		lua_pushinteger(L, peffect->get_value(acc ? 2 : 1));
+		return 1;
+	}
+	lua_pushinteger(L, self->get_attack());
+	return 1;
 }
 LUA_FUNCTION(IsDisabled) {
 	lua_pushboolean(L, self->is_status(STATUS_DISABLED));

@@ -1690,6 +1690,23 @@ void card::admin_remove() {
 	auto message = pduel->new_message(MSG_REMOVE_ADMIN);
 	message->write(get_info_location());
 }
+int32_t card::pair_add(card* target) {
+	if(!(data.type & TYPE_PAIRING) && !(target->data.type & TYPE_PAIRING))
+		return -1;
+	paired_cards.insert(target);
+	target->paired_cards.insert(this);
+	return 0;
+}
+void card::pair_remove(card* target) {
+	paired_cards.erase(target);
+	target->paired_cards.erase(this);
+}
+void card::unpair_all() {
+	for(auto& pcard : paired_cards) {
+		pcard->paired_cards.erase(this);
+	}
+	paired_cards.clear();
+}
 void card::apply_field_effect() {
 	if (current.controler == PLAYER_NONE)
 		return;
@@ -2099,6 +2116,7 @@ void card::reset(uint32_t id, uint32_t reset_type) {
 		}
 		if(id & RESET_TOFIELD) {
 			pre_equip_target = nullptr;
+			pre_paired_cards.clear();
 		}
 		if(id & RESET_DISABLE) {
 			for(auto cmit = counters.begin(); cmit != counters.end();) {
@@ -3234,7 +3252,8 @@ int32_t card::is_summonable_card() {
 	if(!(data.type & TYPE_MONSTER) || (data.type & (TYPE_RITUAL | TYPE_SPSUMMON
 					  | TYPE_FUSION | TYPE_SYNCHRO | TYPE_XYZ | TYPE_LINK
 					  | TYPE_TOKEN | TYPE_TRAPMONSTER
-					  | TYPE_ACCESS | TYPE_PAIRING)))
+					  | TYPE_ACCESS | TYPE_PAIRING
+					  | TYPE_KEY)))
 		return FALSE;
 	return !is_affected_by_effect(EFFECT_UNSUMMONABLE_CARD);
 }
@@ -3458,6 +3477,8 @@ int32_t card::is_special_summonable(uint8_t playerid, uint32_t summon_type) {
 int32_t card::is_can_be_special_summoned(effect* reason_effect, uint32_t sumtype, uint8_t sumpos, uint8_t sumplayer, uint8_t toplayer, uint8_t nocheck, uint8_t nolimit, uint32_t zone) {
 	if(reason_effect->get_handler() == this)
 		reason_effect->status |= EFFECT_STATUS_SUMMON_SELF;
+	if((data.type & TYPE_KEY) && !(data.type & TYPE_UNLOCKED))
+		return FALSE;
 	if(current.location == LOCATION_MZONE)
 		return FALSE;
 	if(!nolimit && is_affected_by_effect(EFFECT_REVIVE_LIMIT) && !is_status(STATUS_PROC_COMPLETE)) {
@@ -4131,15 +4152,16 @@ int32_t card::is_can_be_link_material(card* scard, uint8_t playerid) {
 int32_t card::is_can_be_material(card* scard, uint64_t sumtype, uint8_t playerid) {
 	if(this == scard)
 		return FALSE;
-	if(sumtype & SUMMON_TYPE_FUSION)
+	uint64_t sumtype_masked = sumtype & 0xff000000;
+	if(sumtype_masked == SUMMON_TYPE_FUSION)
 		return is_can_be_fusion_material(scard, sumtype, playerid);
-	if(sumtype & SUMMON_TYPE_SYNCHRO)
+	if(sumtype_masked == SUMMON_TYPE_SYNCHRO)
 		return is_can_be_synchro_material(scard, playerid);
-	if(sumtype & SUMMON_TYPE_RITUAL)
+	if(sumtype_masked == SUMMON_TYPE_RITUAL)
 		return is_can_be_ritual_material(scard, playerid);
-	if(sumtype & SUMMON_TYPE_XYZ)
+	if(sumtype_masked == SUMMON_TYPE_XYZ)
 		return is_can_be_xyz_material(scard, playerid, REASON_XYZ | REASON_MATERIAL);
-	if(sumtype & SUMMON_TYPE_LINK)
+	if(sumtype_masked == SUMMON_TYPE_LINK)
 		return is_can_be_link_material(scard, playerid);
 	if(is_status(STATUS_FORBIDDEN))
 		return FALSE;

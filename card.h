@@ -162,6 +162,8 @@ public:
 	card* admin_card{};
 	card* admin_target{};
 	card* pre_admin_target{};
+	card_set paired_cards;
+	card_set pre_paired_cards;
 	relation_map relations;
 	counter_map counters;
 	effect_count indestructable_effects;
@@ -266,6 +268,9 @@ public:
 	void xyz_remove(card* mat);
 	int32_t admin_set(card* target);
 	void admin_remove();
+	int32_t pair_add(card* target);
+	void pair_remove(card* target);
+	void unpair_all();
 	void apply_field_effect();
 	void cancel_field_effect();
 	void enable_field_effect(bool enabled);
@@ -386,6 +391,9 @@ public:
 #define SUMMON_TYPE_XYZ      0x49000000
 #define SUMMON_TYPE_PENDULUM 0x4a000000
 #define SUMMON_TYPE_LINK     0x4c000000
+#define SUMMON_TYPE_ACCESS   0x4D000000
+#define SUMMON_TYPE_PAIRING  0x4E000000
+#define SUMMON_TYPE_UNLOCK   0x4F000000
 //Counter
 #define COUNTER_WITHOUT_PERMIT 0x1000
 #define COUNTER_NEED_ENABLE    0x2000

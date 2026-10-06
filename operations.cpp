@@ -1013,7 +1013,13 @@ bool field::process(Processors::XyzOverlay& arg) {
 				acard->admin_remove();
 				des.insert(acard);
 			}
+			if(pcard->paired_cards.size()) {
+				pcard->pre_paired_cards = pcard->paired_cards;
+				pcard->unpair_all();
+			}
 			pcard->clear_card_target();
+			if((pcard->current.location & LOCATION_ONFIELD) && (pcard->data.type & TYPE_KEY) && (pcard->data.type & TYPE_UNLOCKED) && pcard->data.alias)
+				pcard->recreate(pcard->data.alias);
 			auto message = pduel->new_message(MSG_MOVE);
 			message->write<uint32_t>(pcard->data.code);
 			message->write(pcard->get_info_location());
@@ -3165,6 +3171,8 @@ bool field::process(Processors::SpSummonRule& arg) {
 			matreason = REASON_XYZ;
 		else if(proc->value == SUMMON_TYPE_LINK)
 			matreason = REASON_LINK;
+		else if(proc->value == SUMMON_TYPE_PAIRING)
+			matreason = REASON_PAIRING;
 		if (target->material_cards.size()) {
 			for (auto& mcard : target->material_cards)
 				raise_single_event(mcard, nullptr, EVENT_BE_PRE_MATERIAL, proc, matreason, sumplayer, sumplayer, 0);
@@ -3237,6 +3245,8 @@ bool field::process(Processors::SpSummonRule& arg) {
 			matreason = REASON_XYZ;
 		else if(proc->value == SUMMON_TYPE_LINK)
 			matreason = REASON_LINK;
+		else if(proc->value == SUMMON_TYPE_PAIRING)
+			matreason = REASON_PAIRING;
 		if(target->material_cards.size()) {
 			for(auto& mcard : target->material_cards)
 				raise_single_event(mcard, nullptr, EVENT_BE_MATERIAL, proc, matreason, sumplayer, sumplayer, 0);
@@ -3266,6 +3276,7 @@ bool field::process(Processors::SpSummonRule& arg) {
 	}
 	case 20: {
 		auto proc = arg.summon_proc_effect;
+		target->material_cards.clear();
 		arg.cards_to_summon_g = pduel->new_group();
 		if(proc->operation) {
 			core.sub_solving_event.push_back(nil_event);
@@ -3450,6 +3461,9 @@ bool field::process(Processors::SpSummonRule& arg) {
 		for(auto& pcard : pgroup->container) {
 			pcard->set_status(STATUS_SUMMONING, FALSE);
 			pcard->set_status(STATUS_SPSUMMON_TURN, TRUE);
+			int32_t summontype = pcard->summon.type & 0xff000000;
+			if(summontype == SUMMON_TYPE_ACCESS)
+				pcard->set_status(STATUS_PROC_COMPLETE, TRUE);
 			pcard->enable_field_effect(true);
 			if(pcard->is_status(STATUS_DISABLED))
 				pcard->reset(RESET_DISABLE, RESET_EVENT);
@@ -3471,6 +3485,28 @@ bool field::process(Processors::SpSummonRule& arg) {
 			}
 			for(auto& cit : spsummon_once_set)
 				++core.spsummon_once_map[sumplayer][cit];
+		}
+		for(auto& pcard : pgroup->container) {
+			int32_t summontype = pcard->summon.type & 0xff000000;
+			if(summontype && pcard->material_cards.size() && !pcard->is_status(STATUS_FUTURE_FUSION)) {
+				int32_t matreason = 0;
+				if(summontype == SUMMON_TYPE_FUSION)
+					matreason = REASON_FUSION;
+				else if(summontype == SUMMON_TYPE_RITUAL)
+					matreason = REASON_RITUAL;
+				else if(summontype == SUMMON_TYPE_XYZ)
+					matreason = REASON_XYZ;
+				else if(summontype == SUMMON_TYPE_LINK)
+					matreason = REASON_LINK;
+				else if(summontype == SUMMON_TYPE_ACCESS)
+					matreason = REASON_ACCESS;
+				else if(summontype == SUMMON_TYPE_PAIRING)
+					matreason = REASON_PAIRING;
+				for(auto& mcard : pcard->material_cards)
+					raise_single_event(mcard, &pgroup->container, EVENT_BE_MATERIAL, pcard->current.reason_effect, matreason, pcard->current.reason_player, pcard->summon.player, 0);
+				raise_event(pcard->material_cards, EVENT_BE_MATERIAL, pcard->current.reason_effect, matreason, pcard->current.reason_player, pcard->summon.player, 0);
+			}
+			pcard->set_status(STATUS_FUTURE_FUSION, FALSE);
 		}
 		for(auto& pcard : pgroup->container)
 			raise_single_event(pcard, nullptr, EVENT_SPSUMMON_SUCCESS, pcard->current.reason_effect, 0, pcard->current.reason_player, pcard->summon.player, 0);
@@ -3734,6 +3770,8 @@ bool field::process(Processors::SpSummon& arg) {
 			if(!(pcard->current.position & POS_FACEDOWN))
 				raise_single_event(pcard, nullptr, EVENT_SPSUMMON_SUCCESS, pcard->current.reason_effect, 0, pcard->current.reason_player, pcard->summon.player, 0);
 			int32_t summontype = pcard->summon.type & 0xff000000;
+			if(summontype == SUMMON_TYPE_ACCESS)
+				pcard->set_status(STATUS_PROC_COMPLETE, TRUE);
 			if(summontype && pcard->material_cards.size() && !pcard->is_status(STATUS_FUTURE_FUSION)) {
 				int32_t matreason = 0;
 				if(summontype == SUMMON_TYPE_FUSION)
@@ -3744,6 +3782,8 @@ bool field::process(Processors::SpSummon& arg) {
 					matreason = REASON_XYZ;
 				else if(summontype == SUMMON_TYPE_LINK)
 					matreason = REASON_LINK;
+				else if(summontype == SUMMON_TYPE_ACCESS)
+					matreason = REASON_ACCESS;
 				for(auto& mcard : pcard->material_cards)
 					raise_single_event(mcard, &targets->container, EVENT_BE_MATERIAL, pcard->current.reason_effect, matreason, pcard->current.reason_player, pcard->summon.player, 0);
 				raise_event(pcard->material_cards, EVENT_BE_MATERIAL, reason_effect, matreason, reason_player, pcard->summon.player, 0);
@@ -4502,6 +4542,8 @@ bool field::process(Processors::SendTo& arg) {
 		}
 		//call move_card()
 		if(pcard->current.controler != playerid || pcard->current.location != dest) {
+			if((oloc & LOCATION_ONFIELD) && (pcard->data.type & TYPE_KEY) && (pcard->data.type & TYPE_UNLOCKED) && pcard->data.alias)
+				pcard->recreate(pcard->data.alias);
 			auto message = pduel->new_message(MSG_MOVE);
 			message->write<uint32_t>(pcard->data.code);
 			message->write(pcard->get_info_location());
@@ -4671,6 +4713,10 @@ bool field::process(Processors::SendTo& arg) {
 			}
 			if(pcard->admin_card) {
 				admins.insert(pcard->admin_card);
+			}
+			if(pcard->paired_cards.size()) {
+				pcard->pre_paired_cards = pcard->paired_cards;
+				pcard->unpair_all();
 			}
 			pcard->clear_card_target();
 			if(nloc == LOCATION_HAND) {
@@ -5068,6 +5114,8 @@ bool field::process(Processors::MoveToField& arg) {
 				}
 			}
 		}
+		if((target->current.location & LOCATION_ONFIELD) && (target->data.type & TYPE_KEY) && (target->data.type & TYPE_UNLOCKED) && target->data.alias)
+			target->recreate(target->data.alias);
 		auto message = pduel->new_message(MSG_MOVE);
 		message->write<uint32_t>(target->data.code);
 		message->write(target->get_info_location());
@@ -5096,6 +5144,10 @@ bool field::process(Processors::MoveToField& arg) {
 				card* acard = target->admin_card;
 				acard->admin_remove();
 				send_to(acard, nullptr, REASON_LOST_TARGET + REASON_RULE, PLAYER_NONE, PLAYER_NONE, LOCATION_GRAVE, 0, POS_FACEUP);
+			}
+			if(target->paired_cards.size()) {
+				target->pre_paired_cards = target->paired_cards;
+				target->unpair_all();
 			}
 		}
 		if((target->previous.location == LOCATION_SZONE) && target->equiping_target)
