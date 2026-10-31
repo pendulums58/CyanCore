@@ -101,9 +101,8 @@
 #define RACE_WYRM         0x800000
 #define RACE_CYBERSE      0x1000000
 #define RACE_ILLUSION     0x2000000
-#define RACE_YOKAI             0x4000000000000000
 #define RACE_MAX               RACE_ILLUSION
-#define RACE_ALL               (((((uint64_t)RACE_MAX)<<1)-1)|RACE_YOKAI)
+#define RACE_ALL               ((((uint64_t)RACE_MAX)<<1)-1)
 
 /* Event Reasons */
 #define REASON_DESTROY     0x1
