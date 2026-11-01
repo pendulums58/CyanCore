@@ -739,6 +739,12 @@ struct XyzOverlay : public Process<false> {
 		Process(step_), send_materials_to_grave(send_materials_to_grave_), target(target_),
 		materials(materials_) {}
 };
+struct AdminSet : public Process<false> {
+	card* pcard;
+	card* target;
+	AdminSet(uint16_t step_, card* pcard_, card* target_) :
+		Process(step_), pcard(pcard_), target(target_) {}
+};
 struct RefreshRelay : public Process<false> {
 	RefreshRelay(uint16_t step_) :
 		Process(step_) {}
@@ -760,7 +766,7 @@ using processors = std::variant<Adjust, Turn, RefreshLoc, Startup,
 	PayLPCost, RemoveCounter, AttackDisable, AnnounceRace, AnnounceAttribute,
 	AnnounceCard, AnnounceNumber, TossCoin, TossDice, RockPaperScissors,
 	SelectFusion, DiscardHand, DiscardDeck, SortDeck, RemoveOverlay, XyzOverlay,
-	RefreshRelay>;
+	AdminSet, RefreshRelay>;
 
 /*
 * Hack to make the code compile with gcc in debug mode by having

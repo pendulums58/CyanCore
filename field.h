@@ -616,6 +616,7 @@ public:
 	void remove_overlay_card(uint32_t reason, group* pgroup, uint32_t rplayer, uint8_t self, uint8_t oppo, uint16_t min, uint16_t max);
 	void xyz_overlay(card* target, card_set materials, bool send_materials_to_grave);
 	void xyz_overlay(card* target, card* material, bool send_materials_to_grave);
+	void admin_set(card* pcard, card* target);
 	void get_control(card_set targets, effect* reason_effect, uint8_t chose_player, uint8_t playerid, uint16_t reset_phase, uint8_t reset_count, uint32_t zone);
 	void get_control(card* target, effect* reason_effect, uint8_t chose_player, uint8_t playerid, uint16_t reset_phase, uint8_t reset_count, uint32_t zone);
 	void swap_control(effect* reason_effect, uint32_t reason_player, card_set targets1, card_set targets2, uint32_t reset_phase, uint32_t reset_count);
@@ -648,6 +649,7 @@ public:
 	bool process(Processors::RemoveCounter& arg);
 	bool process(Processors::RemoveOverlay& arg);
 	bool process(Processors::XyzOverlay& arg);
+	bool process(Processors::AdminSet& arg);
 	bool process(Processors::GetControl& arg);
 	bool process(Processors::SwapControl& arg);
 	bool process(Processors::ControlAdjust& arg);

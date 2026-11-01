@@ -994,10 +994,13 @@ LUA_FUNCTION(GetPreviousAdminTarget) {
 LUA_FUNCTION(SetAdmin) {
 	check_action_permission(L);
 	auto target = lua_get<card*, true>(L, 2);
-	int32_t res = self->admin_set(target);
-	lua_pushboolean(L, res == 0 ? TRUE : FALSE);
-	lua_pushinteger(L, res);
-	return 2;
+	pduel->game_field->admin_set(self, target);
+	return yieldk({
+		int32_t res = pduel->game_field->returns.at<int32_t>(0);
+		lua_pushboolean(L, res == 0 ? TRUE : FALSE);
+		lua_pushinteger(L, res);
+		return 2;
+	});
 }
 LUA_FUNCTION(RemoveAdmin) {
 	check_action_permission(L);

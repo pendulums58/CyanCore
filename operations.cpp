@@ -126,6 +126,9 @@ void field::xyz_overlay(card* target, card_set materials, bool send_materials_to
 void field::xyz_overlay(card* target, card* material, bool send_materials_to_grave) {
 	xyz_overlay(target, card_set{ material }, send_materials_to_grave);
 }
+void field::admin_set(card* pcard, card* target) {
+	emplace_process<Processors::AdminSet>(pcard, target);
+}
 void field::get_control(card_set targets, effect* reason_effect, uint8_t chose_player, uint8_t playerid, uint16_t reset_phase, uint8_t reset_count, uint32_t zone) {
 	auto ng = pduel->new_group(std::move(targets));
 	ng->is_readonly = true;
@@ -1068,6 +1071,89 @@ bool field::process(Processors::XyzOverlay& arg) {
 		if(target->current.location & LOCATION_ONFIELD)
 			adjust_all();
 		return FALSE;
+	}
+	}
+	return TRUE;
+}
+// Same leave-the-field cleanup as XyzOverlay, for a single card becoming an admin.
+bool field::process(Processors::AdminSet& arg) {
+	auto pcard = arg.pcard;
+	auto target = arg.target;
+	switch(arg.step) {
+	case 0: {
+		int32_t res = 0;
+		if(pcard->admin_target)
+			res = -1;
+		else if(target->admin_card)
+			res = -3;
+		if(res != 0) {
+			returns.set<int32_t>(0, res);
+			return TRUE;
+		}
+		if(!pcard->overlay_target)
+			pcard->enable_field_effect(false);
+		return FALSE;
+	}
+	case 1: {
+		card_set des;
+		pcard->reset(RESET_LEAVE + RESET_OVERLAY, RESET_EVENT);
+		if(pcard->unique_code)
+			remove_unique_card(pcard);
+		if(pcard->equiping_target)
+			pcard->unequip();
+		for(auto cit = pcard->equiping_cards.begin(); cit != pcard->equiping_cards.end();) {
+			card* equipc = *cit++;
+			des.insert(equipc);
+			equipc->unequip();
+		}
+		if(pcard->admin_card) {
+			card* acard = pcard->admin_card;
+			acard->admin_remove();
+			des.insert(acard);
+		}
+		if(pcard->paired_cards.size()) {
+			pcard->pre_paired_cards = pcard->paired_cards;
+			pcard->unpair_all();
+		}
+		pcard->clear_card_target();
+		if((pcard->current.location & LOCATION_ONFIELD) && (pcard->data.type & TYPE_KEY) && (pcard->data.type & TYPE_UNLOCKED) && pcard->data.alias)
+			pcard->recreate(pcard->data.alias);
+		bool from_grave = false;
+		duel::duel_message* message = nullptr;
+		if(pcard->current.location != 0) {
+			message = pduel->new_message(MSG_MOVE);
+			message->write<uint32_t>(pcard->data.code);
+			message->write(pcard->get_info_location());
+			if(pcard->overlay_target) {
+				pcard->overlay_target->xyz_remove(pcard);
+			} else {
+				remove_card(pcard);
+				add_to_disable_check_list(pcard);
+				from_grave = pcard->previous.location == LOCATION_GRAVE;
+			}
+		}
+		pcard->admin_set(target);
+		if(message) {
+			message->write(pcard->get_info_location());
+			message->write<uint32_t>(0);
+		}
+		if(from_grave) {
+			raise_single_event(pcard, nullptr, EVENT_LEAVE_GRAVE, core.reason_effect, 0, core.reason_player, 0, 0);
+			raise_event(pcard, EVENT_LEAVE_GRAVE, core.reason_effect, 0, core.reason_player, 0, 0);
+			process_single_event();
+			process_instant_event();
+		}
+		if(des.size())
+			destroy(std::move(des), nullptr, REASON_LOST_TARGET + REASON_RULE, PLAYER_NONE);
+		else
+			adjust_instant();
+		if(target->current.location & LOCATION_ONFIELD)
+			adjust_all();
+		return FALSE;
+	}
+	case 2: {
+		returns.set<int32_t>(0, 0);
+		return TRUE;
 	}
 	}
 	return TRUE;
